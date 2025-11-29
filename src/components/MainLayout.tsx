@@ -1,37 +1,20 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { useAtom } from 'jotai'
-import { currentFlightPlanAtom, waypointsAtom, flightSettingsAtom, droneModelAtom } from '../store/flightPlanStore'
-import { FlightPlan } from '../types'
+import { toastsAtom, removeToastAtom } from '../store/toastStore'
 import Toolbar from './Toolbar'
 import MapView from './MapView'
 import WaypointPanel from './WaypointPanel'
 import SettingsPanel from './SettingsPanel'
+import { ToastContainer } from './Toast'
 import './MainLayout.css'
 
 const MainLayout: React.FC = () => {
   console.log('MainLayout rendering...')
-  const [flightPlan, setFlightPlan] = useAtom(currentFlightPlanAtom)
-  const [waypoints] = useAtom(waypointsAtom)
-  const [settings] = useAtom(flightSettingsAtom)
-  const [droneModel] = useAtom(droneModelAtom)
+  const [toasts] = useAtom(toastsAtom)
+  const removeToast = useAtom(removeToastAtom)[1]
 
-  // Initialize flight plan immediately when MainLayout mounts
-  useEffect(() => {
-    if (!flightPlan) {
-      const newPlan: FlightPlan = {
-        id: Date.now().toString(),
-        name: 'New Flight Plan',
-        droneModel,
-        waypoints: [],
-        settings,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
-      setFlightPlan(newPlan)
-      console.log('MainLayout: Auto-created flight plan:', newPlan)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run once on mount - flightPlan check prevents re-initialization
+  // Flight plan should already be loaded from WelcomePage
+  // No need to auto-create here
 
   return (
     <div className="main-layout">
@@ -45,6 +28,7 @@ const MainLayout: React.FC = () => {
           <MapView />
         </div>
       </div>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   )
 }

@@ -62,3 +62,15 @@ export const DJI_MODELS: DJIModel[] = [
   'Mavic 3 Classic',
 ]
 
+// Camera sensor width in millimeters for each DJI model
+export const DJI_CAMERA_SENSORS: Record<DJIModel, number> = {
+  'Mini 5 Pro': 13.2,      // 1-inch CMOS
+  'Mavic 4 Pro': 17.3,     // 4/3" CMOS
+  'Mini 4 Pro': 9.6,       // 1/1.3" CMOS
+  'Air 3': 9.6,            // 1/1.3" CMOS
+  'Air 3S': 13.2,          // 1-inch CMOS
+  'Mavic 3': 17.3,         // 4/3" CMOS
+  'Mavic 3 Pro': 17.3,     // 4/3" CMOS
+  'Mavic 3 Classic': 17.3, // 4/3" CMOS
+}
+

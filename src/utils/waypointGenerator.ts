@@ -2,7 +2,8 @@ import { Waypoint, FlightSettings } from '../types'
 import L from 'leaflet'
 
 /**
- * Generate waypoints in a grid pattern within a polygon or rectangle
+ * Generate waypoints along parallel flight lines (lawnmower pattern) within a polygon or rectangle
+ * Creates waypoints along parallel lines with proper spacing, not a full grid
  */
 export const generateWaypointsFromArea = (
   layer: L.Polygon | L.Rectangle,
@@ -13,37 +14,88 @@ export const generateWaypointsFromArea = (
   const ne = bounds.getNorthEast()
   const centerLat = (sw.lat + ne.lat) / 2
   
-  // Calculate grid spacing based on path spacing setting
+  // Calculate spacing based on path spacing setting
   // Account for latitude (degrees vary by latitude)
   const metersPerDegreeLat = 111320 // meters per degree latitude (constant)
   const metersPerDegreeLng = 111320 * Math.cos((centerLat * Math.PI) / 180) // varies by latitude
   
+  // Path spacing in degrees (distance between parallel flight lines)
   const spacingLat = settings.pathSpacing / metersPerDegreeLat
-  const spacingLng = settings.pathSpacing / metersPerDegreeLng
   
-  // Calculate number of rows and columns
+  // Calculate waypoint spacing along each line
+  // Use path spacing as the waypoint spacing (waypoints should be spaced similar to flight lines)
+  // This ensures reasonable waypoint density without creating too many waypoints
+  // Minimum waypoint spacing: 3m to prevent excessive waypoints
+  const waypointSpacingMeters = Math.max(settings.pathSpacing, 3)
+  const waypointSpacingLng = waypointSpacingMeters / metersPerDegreeLng
+  
+  // Calculate number of flight lines (rows)
   const latRange = ne.lat - sw.lat
-  const lngRange = ne.lng - sw.lng
+  const numLines = Math.max(1, Math.floor(latRange / spacingLat))
   
-  const rows = Math.ceil(latRange / spacingLat)
-  const cols = Math.ceil(lngRange / spacingLng)
+  // Adjust spacing to evenly distribute lines
+  const adjustedSpacingLat = numLines > 0 ? latRange / numLines : latRange
   
   const waypoints: Waypoint[] = []
   
-  // Generate waypoints in a grid pattern
-  for (let row = 0; row <= rows; row++) {
-    const lat = sw.lat + (row * spacingLat)
+  // Generate waypoints along parallel flight lines
+  for (let lineIndex = 0; lineIndex <= numLines; lineIndex++) {
+    const lat = sw.lat + (lineIndex * adjustedSpacingLat)
     
-    const rowWaypoints: Waypoint[] = []
+    // Find intersection points of this latitude line with the polygon/rectangle
+    let minLng = sw.lng
+    let maxLng = ne.lng
     
-    for (let col = 0; col <= cols; col++) {
-      const lng = sw.lng + (col * spacingLng)
+    if (layer instanceof L.Rectangle) {
+      // For rectangles, use the bounding box edges
+      minLng = sw.lng
+      maxLng = ne.lng
+    } else {
+      // For polygons, find intersection points with the polygon boundary
+      const polygon = layer as L.Polygon
+      const latlngs = polygon.getLatLngs()[0] as L.LatLng[]
+      
+      // Find all intersections of the horizontal line with polygon edges
+      const intersections: number[] = []
+      
+      for (let i = 0; i < latlngs.length; i++) {
+        const p1 = latlngs[i]
+        const p2 = latlngs[(i + 1) % latlngs.length]
+        
+        // Check if the line crosses this edge
+        if ((p1.lat <= lat && p2.lat > lat) || (p1.lat > lat && p2.lat <= lat)) {
+          // Calculate intersection longitude
+          const t = (lat - p1.lat) / (p2.lat - p1.lat)
+          const lng = p1.lng + t * (p2.lng - p1.lng)
+          intersections.push(lng)
+        }
+      }
+      
+      if (intersections.length >= 2) {
+        intersections.sort((a, b) => a - b)
+        minLng = intersections[0]
+        maxLng = intersections[intersections.length - 1]
+      } else {
+        // Skip this line if no valid intersections
+        continue
+      }
+    }
+    
+    // Generate waypoints along this line
+    const lngRange = maxLng - minLng
+    const numWaypointsOnLine = Math.max(2, Math.ceil(lngRange / waypointSpacingLng))
+    const adjustedSpacingLng = numWaypointsOnLine > 1 ? lngRange / (numWaypointsOnLine - 1) : lngRange
+    
+    const lineWaypoints: Waypoint[] = []
+    
+    for (let wpIndex = 0; wpIndex < numWaypointsOnLine; wpIndex++) {
+      const lng = minLng + (wpIndex * adjustedSpacingLng)
       const point = L.latLng(lat, lng)
       
-      // Check if point is inside the polygon/rectangle
+      // For polygons, verify point is inside
       if (layer instanceof L.Rectangle || isPointInPolygon(point, layer as L.Polygon)) {
-        rowWaypoints.push({
-          id: `generated-${row}-${col}-${Date.now()}`,
+        lineWaypoints.push({
+          id: `generated-${lineIndex}-${wpIndex}-${Date.now()}`,
           latitude: lat,
           longitude: lng,
           altitude: settings.altitude,
@@ -56,14 +108,11 @@ export const generateWaypointsFromArea = (
       }
     }
     
-    // Sort row waypoints by longitude
-    rowWaypoints.sort((a, b) => a.longitude - b.longitude)
-    
-    // Add in zigzag pattern: even rows left-to-right, odd rows right-to-left
-    if (row % 2 === 0) {
-      waypoints.push(...rowWaypoints)
+    // Add in zigzag pattern: even lines left-to-right, odd lines right-to-left
+    if (lineIndex % 2 === 0) {
+      waypoints.push(...lineWaypoints)
     } else {
-      waypoints.push(...rowWaypoints.reverse())
+      waypoints.push(...lineWaypoints.reverse())
     }
   }
   

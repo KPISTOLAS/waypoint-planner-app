@@ -15,5 +15,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // External URL
   openExternal: (url: string) =>
     ipcRenderer.invoke('open-external', url),
+  
+  // Project management
+  getProjectsFolder: () => ipcRenderer.invoke('get-projects-folder'),
+  listProjects: () => ipcRenderer.invoke('list-projects'),
+  createProject: (projectName: string, flightPlan: any) =>
+    ipcRenderer.invoke('create-project', projectName, flightPlan),
+  updateProject: (projectName: string, flightPlan: any) =>
+    ipcRenderer.invoke('update-project', projectName, flightPlan),
+  loadProject: (filePath: string) =>
+    ipcRenderer.invoke('load-project', filePath),
 })
 

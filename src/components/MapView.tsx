@@ -278,8 +278,9 @@ const MapView: React.FC = () => {
   const [selectedWaypoint, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
   const [mapCenter, setMapCenter] = useAtom(mapCenterAtom)
   const [mapZoom, setMapZoom] = useAtom(mapZoomAtom)
+  const [settings] = useAtom(flightSettingsAtom)
   const [mapError, setMapError] = React.useState<string | null>(null)
-  const [mapStyle, setMapStyle] = useState<MapStyle>('dark')
+  const [mapStyle, setMapStyle] = useState<MapStyle>('osm')
   const [showStyleSelector, setShowStyleSelector] = useState(false)
   const mapRef = useRef<L.Map | null>(null)
   const styleSelectorRef = useRef<HTMLDivElement>(null)
@@ -304,25 +305,53 @@ const MapView: React.FC = () => {
   // Initialize map to a default location if not set
   useEffect(() => {
     if (mapCenter[0] === 0 && mapCenter[1] === 0) {
-      // Default to a central location (you can change this)
-      setMapCenter([40.7128, -74.0060]) // New York City
-      setMapZoom(13)
+      // Default to Balkans/Greece/Italy region
+      setMapCenter([41.5, 20.0])
+      setMapZoom(6)
     }
   }, [mapCenter, setMapCenter, setMapZoom])
 
-  // Handle Delete key to remove selected waypoint
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if Delete or Backspace key is pressed
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedWaypoint) {
-        // Don't delete if user is typing in an input field
-        const target = e.target as HTMLElement
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-          return
+      // Don't handle shortcuts if user is typing in an input field
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      // N - Add new waypoint at map center
+      if (e.key === 'n' || e.key === 'N') {
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          const newWaypoint: Waypoint = {
+            id: Date.now().toString(),
+            latitude: mapCenter[0],
+            longitude: mapCenter[1],
+            altitude: settings.altitude,
+            speed: settings.speed,
+            gimbalPitch: settings.gimbalAngle,
+            heading: 0,
+            actions: settings.autoTakePhoto ? [{ type: 'takePhoto' }] : [],
+            dynamicAltitude: settings.dynamicAltitude,
+          }
+          setWaypoints([...waypoints, newWaypoint])
+          setSelectedWaypoint(newWaypoint.id)
         }
-        
-        // Delete the selected waypoint
+      }
+
+      // D or Delete - Delete selected waypoint
+      if ((e.key === 'Delete' || e.key === 'Backspace' || e.key === 'd' || e.key === 'D') && selectedWaypoint) {
+        if (e.key === 'd' || e.key === 'D') {
+          if (e.ctrlKey || e.metaKey) return // Allow Ctrl+D for browser
+          e.preventDefault()
+        }
         setWaypoints(waypoints.filter((wp) => wp.id !== selectedWaypoint))
+        setSelectedWaypoint(null)
+      }
+
+      // Escape - Deselect waypoint
+      if (e.key === 'Escape' && selectedWaypoint) {
         setSelectedWaypoint(null)
       }
     }
@@ -331,7 +360,7 @@ const MapView: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedWaypoint, waypoints, setWaypoints, setSelectedWaypoint])
+  }, [selectedWaypoint, waypoints, setWaypoints, setSelectedWaypoint, mapCenter, settings])
 
   // Create polyline path from waypoints
   const pathPositions = waypoints.map((wp) => [wp.latitude, wp.longitude] as [number, number])

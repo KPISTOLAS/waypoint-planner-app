@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
-import { useAtom } from 'jotai'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useAtom, useSetAtom } from 'jotai'
 import { flightSettingsAtom, droneModelAtom, waypointsAtom } from '../store/flightPlanStore'
-import { DJI_MODELS, FlightSettings } from '../types'
-import { Settings, Radio, ChevronDown, ChevronUp, Box, Map, Scan, Eye } from 'lucide-react'
+import { addToastAtom } from '../store/toastStore'
+import { DJI_MODELS, DJI_CAMERA_SENSORS, FlightSettings, Waypoint } from '../types'
+import { applyTerrainElevation } from '../utils/terrainElevation'
+import { Settings, Radio, ChevronDown, ChevronUp, Box, Map, Scan, Eye, Sliders, Mountain } from 'lucide-react'
 import './SettingsPanel.css'
 
 // Preset configurations
@@ -88,9 +90,14 @@ const PRESETS: Record<string, { name: string; icon: React.ReactNode; settings: F
 const SettingsPanel: React.FC = () => {
   const [settings, setSettings] = useAtom(flightSettingsAtom)
   const [droneModel, setDroneModel] = useAtom(droneModelAtom)
-  const [, setWaypoints] = useAtom(waypointsAtom)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [waypoints, setWaypoints] = useAtom(waypointsAtom)
+  const [isCollapsed, setIsCollapsed] = useState(true)
+  const [isGeneralCollapsed, setIsGeneralCollapsed] = useState(true)
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
+  const [qualityValue, setQualityValue] = useState(50) // Default to middle (60% overlap)
+  const isQualityChangingRef = useRef(false)
+  const [isApplyingElevation, setIsApplyingElevation] = useState(false)
+  const addToast = useSetAtom(addToastAtom)
 
   const applyPreset = (presetKey: string) => {
     const preset = PRESETS[presetKey]
@@ -106,6 +113,149 @@ const SettingsPanel: React.FC = () => {
   ) => {
     setSettings({ ...settings, [key]: value })
   }
+
+  // Calculate area from waypoints (bounding box in square meters)
+  const areaSize = useMemo(() => {
+    if (waypoints.length < 2) return 0
+    
+    const lats = waypoints.map(wp => wp.latitude)
+    const lngs = waypoints.map(wp => wp.longitude)
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    
+    // Calculate area in square meters using Haversine formula approximation
+    const centerLat = (minLat + maxLat) / 2
+    const metersPerDegreeLat = 111320
+    const metersPerDegreeLng = 111320 * Math.cos((centerLat * Math.PI) / 180)
+    
+    const width = (maxLng - minLng) * metersPerDegreeLng
+    const height = (maxLat - minLat) * metersPerDegreeLat
+    
+    return width * height
+  }, [waypoints])
+
+  // Calculate settings based on quality slider, area size, and camera sensor
+  const calculateSettingsFromQuality = (quality: number, area: number, sensorWidth: number) => {
+    // Map quality (0-100) to overlap (25%-95%)
+    const overlap = 25 + (quality / 100) * 70 // 25% to 95%
+    
+    // Reference sensor width (13.2mm - typical 1-inch sensor)
+    const referenceSensorWidth = 13.2
+    // Sensor ratio: larger sensors can fly higher for same ground coverage
+    const sensorRatio = sensorWidth / referenceSensorWidth
+    
+    // Calculate suggested altitude based on area size (for display only, not applied)
+    // Small area (< 10,000 m²): 30-50m
+    // Medium area (10,000 - 100,000 m²): 50-80m
+    // Large area (> 100,000 m²): 80-120m
+    let baseAltitude = 50
+    if (area < 10000) {
+      baseAltitude = 30 + (quality / 100) * 20 // 30-50m
+    } else if (area < 100000) {
+      baseAltitude = 50 + (quality / 100) * 30 // 50-80m
+    } else {
+      baseAltitude = 80 + (quality / 100) * 40 // 80-120m
+    }
+    
+    // Adjust altitude based on sensor size
+    // Larger sensors can achieve same GSD at higher altitudes
+    // Formula: optimal altitude = base altitude * sensor ratio
+    const suggestedAltitude = baseAltitude * sensorRatio
+    
+    // Calculate path spacing based on sensor width, suggested altitude, and overlap
+    // Ground coverage width is proportional to (altitude * sensor width)
+    // For typical DJI cameras with ~24mm equivalent focal length:
+    // Ground width ≈ (altitude * sensor_width) / focal_length_equivalent
+    // Using approximate focal length of 24mm (typical for DJI wide cameras)
+    const approximateFocalLength = 24 // mm
+    const groundCoverageWidth = (suggestedAltitude * sensorWidth) / approximateFocalLength
+    
+    // Path spacing = ground coverage width * (1 - overlap/100)
+    let pathSpacing = groundCoverageWidth * (1 - overlap / 100)
+    
+    // Enforce minimum path spacing to prevent too many waypoints
+    // Minimum spacing: 5m for small areas, 8m for medium, 10m for large
+    let minPathSpacing = 5
+    if (area >= 100000) {
+      minPathSpacing = 10
+    } else if (area >= 10000) {
+      minPathSpacing = 8
+    }
+    
+    // Ensure path spacing is never too small
+    pathSpacing = Math.max(pathSpacing, minPathSpacing)
+    
+    // Also enforce maximum reasonable spacing (to avoid too few waypoints)
+    const maxPathSpacing = 50
+    pathSpacing = Math.min(pathSpacing, maxPathSpacing)
+    
+    return {
+      overlap: Math.round(overlap),
+      suggestedAltitude: Math.round(suggestedAltitude),
+      pathSpacing: Math.round(pathSpacing * 10) / 10, // Round to 1 decimal
+    }
+  }
+
+  // Handle quality slider change
+  const handleQualityChange = (value: number) => {
+    isQualityChangingRef.current = true
+    setQualityValue(value)
+    const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
+    const calculated = calculateSettingsFromQuality(value, areaSize, sensorWidth)
+    
+    // Only update pathSpacing and overlap, NOT altitude
+    setSettings({
+      ...settings,
+      pathSpacing: calculated.pathSpacing,
+      imageOverlap: {
+        forward: calculated.overlap,
+        side: calculated.overlap,
+      },
+    })
+    
+    // Reset flag after a short delay
+    setTimeout(() => {
+      isQualityChangingRef.current = false
+    }, 100)
+  }
+
+  // Sync quality slider when settings change manually (if overlap matches calculated value)
+  useEffect(() => {
+    // Don't sync if quality is being changed by the slider
+    if (isQualityChangingRef.current) return
+    
+    if (waypoints.length >= 2) {
+      const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
+      const calculated = calculateSettingsFromQuality(qualityValue, areaSize, sensorWidth)
+      // Only sync if overlap matches (within 5% tolerance)
+      const overlapMatches = 
+        Math.abs(settings.imageOverlap.forward - calculated.overlap) < 5 &&
+        Math.abs(settings.imageOverlap.side - calculated.overlap) < 5
+      
+      if (!overlapMatches) {
+        // Settings were changed manually, try to find matching quality value
+        const overlap = (settings.imageOverlap.forward + settings.imageOverlap.side) / 2
+        const estimatedQuality = ((overlap - 25) / 70) * 100
+        if (estimatedQuality >= 0 && estimatedQuality <= 100) {
+          setQualityValue(Math.round(estimatedQuality))
+        }
+      }
+    }
+  }, [settings.imageOverlap, areaSize, droneModel])
+
+  // Recalculate path spacing when drone model or quality changes (but not altitude)
+  useEffect(() => {
+    if (waypoints.length >= 2 && !isQualityChangingRef.current) {
+      const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
+      const calculated = calculateSettingsFromQuality(qualityValue, areaSize, sensorWidth)
+      setSettings(prev => ({
+        ...prev,
+        pathSpacing: calculated.pathSpacing,
+      }))
+    }
+  }, [droneModel, qualityValue, areaSize, waypoints.length])
 
   // Apply/remove takePhoto action to all waypoints when autoTakePhoto setting changes
   useEffect(() => {
@@ -180,6 +330,80 @@ const SettingsPanel: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* General Settings Section */}
+      <div className="panel-header" onClick={() => setIsGeneralCollapsed(!isGeneralCollapsed)} style={{ cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sliders size={18} />
+          <h2>General Settings</h2>
+        </div>
+        {isGeneralCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+      </div>
+      
+      {!isGeneralCollapsed && (
+        <div className="settings-content">
+          <div className="setting-group">
+            <label className="setting-label">
+              Quality Slider
+              <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#888' }}>
+                {qualityValue === 0 ? 'Speed (25% overlap)' : 
+                 qualityValue === 100 ? 'Quality (95% overlap)' : 
+                 `${Math.round(25 + (qualityValue / 100) * 70)}% overlap`}
+              </span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={qualityValue}
+              onChange={(e) => handleQualityChange(parseInt(e.target.value))}
+              className="quality-slider"
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                background: `linear-gradient(to right, #e74c3c 0%, #f39c12 25%, #3498db 50%, #2ecc71 75%, #27ae60 100%)`,
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#999', marginTop: '4px' }}>
+              <span>Speed</span>
+              <span>Quality</span>
+            </div>
+          </div>
+
+          {waypoints.length >= 2 && (
+            <div style={{ marginTop: '12px', padding: '10px', background: '#f8f9fa', borderRadius: '6px', fontSize: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: '#666' }}>Area Size:</span>
+                <span style={{ fontWeight: '600' }}>
+                  {areaSize < 10000 ? `${(areaSize / 1000).toFixed(2)}k m²` :
+                   areaSize < 1000000 ? `${(areaSize / 10000).toFixed(2)} ha` :
+                   `${(areaSize / 1000000).toFixed(2)} km²`}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: '#666' }}>Camera Sensor:</span>
+                <span style={{ fontWeight: '600' }}>{DJI_CAMERA_SENSORS[droneModel]} mm</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ color: '#666' }}>Suggested Altitude:</span>
+                <span style={{ fontWeight: '600', color: '#4a90e2' }}>{calculateSettingsFromQuality(qualityValue, areaSize, DJI_CAMERA_SENSORS[droneModel]).suggestedAltitude} m</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#666' }}>Path Spacing:</span>
+                <span style={{ fontWeight: '600' }}>{calculateSettingsFromQuality(qualityValue, areaSize, DJI_CAMERA_SENSORS[droneModel]).pathSpacing} m</span>
+              </div>
+            </div>
+          )}
+          {waypoints.length < 2 && (
+            <div style={{ marginTop: '8px', padding: '8px', background: '#fff3cd', borderRadius: '6px', fontSize: '11px', color: '#856404' }}>
+              Add waypoints to see area-based calculations
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Presets Section */}
       <div className="presets-section">
@@ -319,6 +543,38 @@ const SettingsPanel: React.FC = () => {
             />
             <span>Dynamic Altitude Adjustment</span>
           </label>
+        </div>
+
+        <div className="setting-group">
+          <button
+            className="terrain-elevation-btn"
+            onClick={async () => {
+              if (waypoints.length === 0) {
+                addToast('No waypoints to apply terrain elevation to.', 'warning')
+                return
+              }
+              
+              setIsApplyingElevation(true)
+              try {
+                const updated = await applyTerrainElevation(waypoints, settings.altitude)
+                setWaypoints(updated as Waypoint[])
+                addToast(`Terrain elevation applied to ${updated.length} waypoints.`, 'success')
+              } catch (error) {
+                console.error('Failed to apply terrain elevation:', error)
+                addToast('Failed to apply terrain elevation. Please check your internet connection.', 'error')
+              } finally {
+                setIsApplyingElevation(false)
+              }
+            }}
+            disabled={isApplyingElevation || waypoints.length === 0}
+            title="Apply terrain elevation to all waypoints using free elevation API"
+          >
+            <Mountain size={16} />
+            <span>{isApplyingElevation ? 'Applying...' : 'Apply Terrain Elevation'}</span>
+          </button>
+          <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            Adjusts waypoint altitudes based on actual terrain elevation (free API)
+          </p>
         </div>
 
         <div className="setting-group checkbox-group">

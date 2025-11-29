@@ -105,6 +105,26 @@
   transition: all 0.25s;
 }
 
+.waypoint-item.drag-over {
+  background: #e3f2fd;
+  border: 2px dashed #4a90e2;
+  opacity: 0.8;
+}
+
+.waypoint-item[draggable="true"] {
+  cursor: move;
+}
+
+.waypoint-item[draggable="true"]:active {
+  opacity: 0.6;
+}
+
+.waypoint-action-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .waypoint-item.selected .waypoint-number {
   background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
@@ -148,6 +168,199 @@
 .delete-btn:hover {
   background: #fee;
   color: #c33;
+}
+
+.waypoint-action-btn {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waypoint-action-btn:hover {
+  background: #f0f0f0;
+  color: #4a90e2;
+}
+
+.bulk-edit-dialog {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid #e8e8e8;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bulk-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #f8f9fa;
+}
+
+.bulk-edit-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.bulk-edit-header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.bulk-edit-header button:hover {
+  background: #e0e0e0;
+}
+
+.bulk-edit-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.bulk-edit-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.bulk-edit-footer button {
+  padding: 8px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: white;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.bulk-edit-footer button:hover {
+  background: #f8f9fa;
+  border-color: #4a90e2;
+  color: #4a90e2;
+}
+
+.bulk-edit-footer button.primary {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border-color: #4a90e2;
+  color: white;
+}
+
+.bulk-edit-footer button.primary:hover {
+  background: linear-gradient(135deg, #357abd 0%, #2968a3 100%);
+}
+
+.templates-menu {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid #e8e8e8;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.templates-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #f8f9fa;
+}
+
+.templates-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.templates-header button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.templates-header button:hover {
+  background: #e0e0e0;
+}
+
+.templates-list {
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.template-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.template-item:hover {
+  background: #e9f5ff;
+  border-color: #4a90e2;
+}
+
+.template-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.template-description {
+  font-size: 12px;
+  color: #666;
 }
 
 .add-waypoint-btn {

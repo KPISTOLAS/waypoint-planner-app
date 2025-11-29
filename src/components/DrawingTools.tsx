@@ -89,17 +89,8 @@ const DrawingTools: React.FC = () => {
         }
       }
       
-      // Disable drawing handler after shape is created
-      if (currentDrawHandlerRef.current) {
-        try {
-          currentDrawHandlerRef.current.disable()
-        } catch (e) {
-          // Ignore errors
-        }
-        currentDrawHandlerRef.current = null
-      }
-      
-      // Don't reset drawing mode yet - wait for user confirmation
+      // Don't disable drawing handler yet - keep it enabled in case user wants to draw again
+      // Only disable when user confirms or cancels
     }
 
     const handleDrawStart = () => {
@@ -168,7 +159,11 @@ const DrawingTools: React.FC = () => {
           currentDrawHandlerRef.current = null
         }
         setIsDrawing(false)
-        setIsDrawingLocal(false)
+        // Don't reset isDrawingLocal if there's a shape waiting for confirmation
+        // Only reset if there's no drawn shape
+        if (!drawnShape) {
+          setIsDrawingLocal(false)
+        }
       } else if (drawingMode === 'rectangle' || drawingMode === 'polygon' || drawingMode === 'poi') {
         console.log('Enabling drawing mode:', drawingMode)
         
@@ -189,69 +184,74 @@ const DrawingTools: React.FC = () => {
         }
         
         // Create appropriate draw handler
-        if (drawingMode === 'rectangle' && Draw.Rectangle) {
-          try {
-            console.log('Creating Rectangle handler...')
-            const handler = new Draw.Rectangle(map, {
-              shapeOptions: {
-                color: '#4a90e2',
-                weight: 3,
-                fillColor: '#87ceeb',
-                fillOpacity: 0.35,
-                stroke: true,
-              },
+        // Wait a bit to ensure map is fully ready
+        setTimeout(() => {
+          if (!isMounted) return
+          
+          if (drawingMode === 'rectangle' && Draw.Rectangle) {
+            try {
+              console.log('Creating Rectangle handler...')
+              const handler = new Draw.Rectangle(map, {
+                shapeOptions: {
+                  color: '#4a90e2',
+                  weight: 3,
+                  fillColor: '#87ceeb',
+                  fillOpacity: 0.35,
+                  stroke: true,
+                },
+              })
+              currentDrawHandlerRef.current = handler as any
+              handler.enable()
+              console.log('Rectangle drawing enabled successfully')
+            } catch (error) {
+              console.error('Error enabling rectangle drawing:', error)
+            }
+          } else if (drawingMode === 'polygon' && Draw.Polygon) {
+            try {
+              console.log('Creating Polygon handler...')
+              const handler = new Draw.Polygon(map, {
+                shapeOptions: {
+                  color: '#4a90e2',
+                  weight: 3,
+                  fillColor: '#87ceeb',
+                  fillOpacity: 0.35,
+                  stroke: true,
+                },
+                allowIntersection: false,
+              })
+              currentDrawHandlerRef.current = handler as any
+              handler.enable()
+              console.log('Polygon drawing enabled successfully')
+            } catch (error) {
+              console.error('Error enabling polygon drawing:', error)
+            }
+          } else if (drawingMode === 'poi' && Draw.Circle) {
+            try {
+              console.log('Creating Circle handler...')
+              const handler = new Draw.Circle(map, {
+                shapeOptions: {
+                  color: '#4a90e2',
+                  weight: 3,
+                  fillColor: '#87ceeb',
+                  fillOpacity: 0.35,
+                  stroke: true,
+                },
+              })
+              currentDrawHandlerRef.current = handler as any
+              handler.enable()
+              console.log('Circle drawing enabled successfully')
+            } catch (error) {
+              console.error('Error enabling circle drawing:', error)
+            }
+          } else {
+            console.warn('Draw handler not available:', { 
+              mode: drawingMode, 
+              hasRectangle: !!Draw.Rectangle, 
+              hasPolygon: !!Draw.Polygon,
+              hasCircle: !!Draw.Circle
             })
-            currentDrawHandlerRef.current = handler as any
-            handler.enable()
-            console.log('Rectangle drawing enabled successfully')
-          } catch (error) {
-            console.error('Error enabling rectangle drawing:', error)
           }
-        } else if (drawingMode === 'polygon' && Draw.Polygon) {
-          try {
-            console.log('Creating Polygon handler...')
-            const handler = new Draw.Polygon(map, {
-              shapeOptions: {
-                color: '#4a90e2',
-                weight: 3,
-                fillColor: '#87ceeb',
-                fillOpacity: 0.35,
-                stroke: true,
-              },
-              allowIntersection: false,
-            })
-            currentDrawHandlerRef.current = handler as any
-            handler.enable()
-            console.log('Polygon drawing enabled successfully')
-          } catch (error) {
-            console.error('Error enabling polygon drawing:', error)
-          }
-        } else if (drawingMode === 'poi' && Draw.Circle) {
-          try {
-            console.log('Creating Circle handler...')
-            const handler = new Draw.Circle(map, {
-              shapeOptions: {
-                color: '#4a90e2',
-                weight: 3,
-                fillColor: '#87ceeb',
-                fillOpacity: 0.35,
-                stroke: true,
-              },
-            })
-            currentDrawHandlerRef.current = handler as any
-            handler.enable()
-            console.log('Circle drawing enabled successfully')
-          } catch (error) {
-            console.error('Error enabling circle drawing:', error)
-          }
-        } else {
-          console.warn('Draw handler not available:', { 
-            mode: drawingMode, 
-            hasRectangle: !!Draw.Rectangle, 
-            hasPolygon: !!Draw.Polygon,
-            hasCircle: !!Draw.Circle
-          })
-        }
+        }, 100) // Small delay to ensure map is ready
       }
     }
 
@@ -296,6 +296,16 @@ const DrawingTools: React.FC = () => {
     setIsDrawing(false)
     setIsDrawingLocal(false)
     
+    // Disable drawing handler
+    if (currentDrawHandlerRef.current) {
+      try {
+        currentDrawHandlerRef.current.disable()
+      } catch (e) {
+        // Ignore errors
+      }
+      currentDrawHandlerRef.current = null
+    }
+    
     // Reset drawing mode to cursor after generating
     setDrawingMode('cursor')
   }
@@ -307,6 +317,16 @@ const DrawingTools: React.FC = () => {
     setDrawnShape(null)
     setIsDrawing(false)
     setIsDrawingLocal(false)
+    
+    // Disable drawing handler
+    if (currentDrawHandlerRef.current) {
+      try {
+        currentDrawHandlerRef.current.disable()
+      } catch (e) {
+        // Ignore errors
+      }
+      currentDrawHandlerRef.current = null
+    }
     
     // Reset drawing mode to cursor
     setDrawingMode('cursor')
