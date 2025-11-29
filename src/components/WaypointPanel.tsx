@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useAtom, useSetAtom } from 'jotai'
 import { waypointsAtom, selectedWaypointAtom, flightSettingsAtom } from '../store/flightPlanStore'
 import { addToHistoryAtom, undoAtom, redoAtom, canUndoAtom, canRedoAtom } from '../store/historyStore'
-import { Waypoint, WaypointAction } from '../types'
-import { MapPin, Trash2, Edit, Plus, Camera, Video, RotateCcw, ChevronDown, ChevronUp, Copy, Clipboard, Layers, FileStack, Undo2, Redo2, GripVertical } from 'lucide-react'
+import { Waypoint } from '../types'
+import { MapPin, Trash2, Plus, ChevronDown, ChevronUp, Copy, Clipboard, Layers, FileStack, Undo2, Redo2, GripVertical, Search, X as XIcon } from 'lucide-react'
 import { WAYPOINT_TEMPLATES, generateWaypointsFromTemplate } from '../utils/waypointTemplates'
 import './WaypointPanel.css'
 
@@ -17,6 +17,8 @@ const WaypointPanel: React.FC = () => {
   const [showBulkEdit, setShowBulkEdit] = useState(false)
   const [bulkEditValues, setBulkEditValues] = useState<Partial<Waypoint>>({})
   const [showTemplates, setShowTemplates] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showClustered, setShowClustered] = useState(false)
   
   // Undo/Redo
   const addToHistory = useSetAtom(addToHistoryAtom)
@@ -70,19 +72,6 @@ const WaypointPanel: React.FC = () => {
     }
   }
 
-  const handleUpdateWaypoint = (id: string, updates: Partial<Waypoint>) => {
-    // Only save to history if this is a significant change (not just typing)
-    const shouldSave = Object.keys(updates).some(key => 
-      ['latitude', 'longitude', 'altitude'].includes(key)
-    )
-    if (shouldSave) {
-      addToHistory(waypoints)
-    }
-    setWaypoints(
-      waypoints.map((wp) => (wp.id === id ? { ...wp, ...updates } : wp))
-    )
-  }
-  
   const handleUndo = () => {
     if (!canUndo) return
     
@@ -136,14 +125,6 @@ const WaypointPanel: React.FC = () => {
     setDraggedIndex(null)
   }
 
-  const handleAddAction = (waypointId: string, action: WaypointAction) => {
-    const waypoint = waypoints.find((wp) => wp.id === waypointId)
-    if (waypoint) {
-      handleUpdateWaypoint(waypointId, {
-        actions: [...(waypoint.actions || []), action],
-      })
-    }
-  }
 
   const handleDuplicateWaypoint = (id: string) => {
     const waypoint = waypoints.find((wp) => wp.id === id)
@@ -272,7 +253,49 @@ const WaypointPanel: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [selectedWaypoint, copiedWaypoints, canUndo, canRedo])
 
-  const selectedWp = waypoints.find((wp) => wp.id === selectedWaypoint)
+  // Filter waypoints based on search query
+  const filteredWaypoints = React.useMemo(() => {
+    let result = waypoints
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter((wp) => {
+        const index = waypoints.indexOf(wp) + 1
+        return (
+          index.toString().includes(query) ||
+          wp.latitude.toFixed(6).includes(query) ||
+          wp.longitude.toFixed(6).includes(query) ||
+          wp.altitude.toString().includes(query) ||
+          (wp.actions?.some(a => a.type.toLowerCase().includes(query)))
+        )
+      })
+    }
+    
+    // Apply clustering for large missions
+    if (showClustered && waypoints.length > 50) {
+      const clusterSize = 50
+      // Show only first and last waypoints of each cluster
+      const clusters: Waypoint[][] = []
+      for (let i = 0; i < result.length; i += clusterSize) {
+        clusters.push(result.slice(i, i + clusterSize))
+      }
+      // Flatten but mark cluster boundaries
+      return clusters.flatMap((cluster) => {
+        if (cluster.length <= 2) return cluster
+        // Show first, last, and a few in between
+        const visible: Waypoint[] = [cluster[0]]
+        if (cluster.length > 10) {
+          const mid = Math.floor(cluster.length / 2)
+          visible.push(cluster[mid])
+        }
+        visible.push(cluster[cluster.length - 1])
+        return visible
+      })
+    }
+    
+    return result
+  }, [waypoints, searchQuery, showClustered])
 
   return (
     <div className="waypoint-panel">
@@ -360,24 +383,74 @@ const WaypointPanel: React.FC = () => {
       
       {!isCollapsed && (
       <div className="waypoint-panel-content">
-      <div className="waypoint-list">
+        {/* Search/Filter */}
+        {waypoints.length > 0 && (
+          <>
+            <div className="waypoint-search-container">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                className="waypoint-search-input"
+                placeholder="Search waypoints..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              {searchQuery && (
+                <button
+                  className="search-clear-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSearchQuery('')
+                  }}
+                  title="Clear search"
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
+            </div>
+            {waypoints.length > 50 && (
+              <div className="waypoint-cluster-controls">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
+                  <input
+                    type="checkbox"
+                    checked={showClustered}
+                    onChange={(e) => setShowClustered(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  Cluster large missions ({waypoints.length} waypoints)
+                </label>
+              </div>
+            )}
+          </>
+        )}
+        
+        <div className="waypoint-list">
         {waypoints.length === 0 ? (
           <div className="empty-state">
             <MapPin size={48} strokeWidth={1} />
             <p>No waypoints yet</p>
             <p className="empty-hint">Click "Add Waypoint" or click on the map to create one</p>
           </div>
+        ) : filteredWaypoints.length === 0 ? (
+          <div className="empty-state">
+            <Search size={48} strokeWidth={1} />
+            <p>No waypoints found</p>
+            <p className="empty-hint">Try a different search term</p>
+          </div>
         ) : (
-          waypoints.map((waypoint, index) => (
-            <div
+          filteredWaypoints.map((waypoint) => {
+            const originalIndex = waypoints.indexOf(waypoint)
+            return (
+              <div
               key={waypoint.id}
-              className={`waypoint-item ${selectedWaypoint === waypoint.id ? 'selected' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
+              className={`waypoint-item ${selectedWaypoint === waypoint.id ? 'selected' : ''} ${dragOverIndex === originalIndex ? 'drag-over' : ''}`}
               onClick={() => setSelectedWaypoint(waypoint.id)}
               draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
+              onDragStart={() => handleDragStart(originalIndex)}
+              onDragOver={(e) => handleDragOver(e, originalIndex)}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
+              onDrop={(e) => handleDrop(e, originalIndex)}
               style={{ cursor: 'move' }}
             >
               <div className="waypoint-number" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -389,7 +462,7 @@ const WaypointPanel: React.FC = () => {
                   onClick={(e) => e.stopPropagation()}
                   style={{ marginRight: '8px' }}
                 />
-                {index + 1}
+                {originalIndex + 1}
               </div>
               <div className="waypoint-info">
                 <div className="waypoint-coords">
@@ -437,164 +510,11 @@ const WaypointPanel: React.FC = () => {
                 </button>
               </div>
             </div>
-          ))
+            )
+          })
         )}
       </div>
 
-      {selectedWp && (
-        <div className="waypoint-editor">
-          <div className="editor-header">
-            <Edit size={16} />
-            <span>Edit Waypoint {waypoints.findIndex((wp) => wp.id === selectedWp.id) + 1}</span>
-          </div>
-          <div className="editor-content">
-            <div className="editor-field">
-              <label>Latitude</label>
-              <input
-                type="number"
-                value={selectedWp.latitude}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    latitude: parseFloat(e.target.value) || 0,
-                  })
-                }
-                step="0.000001"
-              />
-            </div>
-            <div className="editor-field">
-              <label>Longitude</label>
-              <input
-                type="number"
-                value={selectedWp.longitude}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    longitude: parseFloat(e.target.value) || 0,
-                  })
-                }
-                step="0.000001"
-              />
-            </div>
-            <div className="editor-field">
-              <label>Altitude (m)</label>
-              <input
-                type="number"
-                value={selectedWp.altitude}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    altitude: parseFloat(e.target.value) || 0,
-                  })
-                }
-                step="0.1"
-              />
-            </div>
-            <div className="editor-field">
-              <label>Speed (m/s)</label>
-              <input
-                type="number"
-                value={selectedWp.speed || settings.speed}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    speed: parseFloat(e.target.value) || settings.speed,
-                  })
-                }
-                step="0.1"
-              />
-            </div>
-            <div className="editor-field">
-              <label>Gimbal Pitch (°)</label>
-              <input
-                type="number"
-                value={selectedWp.gimbalPitch || settings.gimbalAngle}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    gimbalPitch: parseFloat(e.target.value) || settings.gimbalAngle,
-                  })
-                }
-                min="-90"
-                max="30"
-                step="1"
-              />
-            </div>
-            <div className="editor-field">
-              <label>Heading (°)</label>
-              <input
-                type="number"
-                value={selectedWp.heading || 0}
-                onChange={(e) =>
-                  handleUpdateWaypoint(selectedWp.id, {
-                    heading: parseFloat(e.target.value) || 0,
-                  })
-                }
-                min="0"
-                max="360"
-                step="1"
-              />
-            </div>
-
-            <div className="editor-section">
-              <label>Waypoint Actions</label>
-              <div className="action-buttons">
-                <button
-                  className="action-btn"
-                  onClick={() =>
-                    handleAddAction(selectedWp.id, { type: 'takePhoto' })
-                  }
-                >
-                  <Camera size={16} />
-                  Take Photo
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={() =>
-                    handleAddAction(selectedWp.id, { type: 'startRecord' })
-                  }
-                >
-                  <Video size={16} />
-                  Start Record
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={() =>
-                    handleAddAction(selectedWp.id, { type: 'stopRecord' })
-                  }
-                >
-                  <Video size={16} />
-                  Stop Record
-                </button>
-                <button
-                  className="action-btn"
-                  onClick={() =>
-                    handleAddAction(selectedWp.id, {
-                      type: 'rotateGimbal',
-                      params: { angle: -45 },
-                    })
-                  }
-                >
-                  <RotateCcw size={16} />
-                  Rotate Gimbal
-                </button>
-              </div>
-              {selectedWp.actions && selectedWp.actions.length > 0 && (
-                <div className="actions-list">
-                  {selectedWp.actions.map((action, idx) => (
-                    <div key={idx} className="action-item">
-                      {action.type}
-                      <button
-                        onClick={() => {
-                          const newActions = selectedWp.actions?.filter((_, i) => i !== idx) || []
-                          handleUpdateWaypoint(selectedWp.id, { actions: newActions })
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showTemplates && !isCollapsed && (
         <div className="templates-menu">

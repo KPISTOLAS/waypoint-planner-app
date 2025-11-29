@@ -72,6 +72,20 @@
   box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
 }
 
+.toolbar-btn.active {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border-color: #357abd;
+  color: white;
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+}
+
+.toolbar-btn.active:hover:not(:disabled) {
+  background: linear-gradient(135deg, #357abd 0%, #2968a3 100%);
+  border-color: #2968a3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+}
+
 .toolbar-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -81,6 +95,185 @@
   background: #fee;
   border-color: #fcc;
   color: #c33;
+}
+
+/* Dark Theme */
+body.dark-theme .toolbar {
+  background: #0f1419;
+  border-bottom-color: #1a1f2e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .toolbar-separator {
+  background: #1a1f2e;
+}
+
+body.dark-theme .toolbar-section-label {
+  color: #9ca3af;
+}
+
+body.dark-theme .app-title {
+  color: #e5e7eb;
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+body.dark-theme .toolbar-btn {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .toolbar-btn:hover:not(:disabled) {
+  background: #1e3a8a;
+  border-color: #2563eb;
+  color: #93c5fd;
+}
+
+body.dark-theme .toolbar-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  border-color: #1e40af;
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+body.dark-theme .toolbar-btn.active:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  border-color: #1e3a8a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+}
+
+body.dark-theme .toolbar-btn:disabled {
+  opacity: 0.4;
+  color: #6b7280;
+}
+
+body.dark-theme .split-dialog {
+  background: #0f1419;
+  border: 1px solid #1a1f2e;
+}
+
+body.dark-theme .split-dialog h3 {
+  color: #e5e7eb;
+}
+
+body.dark-theme .split-dialog p {
+  color: #d1d5db;
+}
+
+body.dark-theme .split-dialog p strong {
+  color: #e5e7eb;
+}
+
+body.dark-theme .split-dialog-input label {
+  color: #d1d5db;
+}
+
+body.dark-theme .split-dialog-input input {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #e5e7eb;
+}
+
+body.dark-theme .split-dialog-input input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+body.dark-theme .split-dialog-info {
+  background: #1a1f2e;
+  color: #d1d5db;
+}
+
+body.dark-theme .export-menu {
+  background: #0f1419;
+  border-color: #1a1f2e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .export-menu-item {
+  color: #e5e7eb;
+}
+
+body.dark-theme .export-menu-item:hover {
+  background: #1a1f2e;
+}
+
+body.dark-theme .export-menu-item:not(:last-child) {
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .export-menu-section:not(:last-child) {
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .export-menu-header {
+  background: #0f1419;
+  color: #9ca3af;
+}
+
+body.dark-theme .flight-stats-menu {
+  background: #0f1419;
+  border-color: #1a1f2e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .stats-item {
+  border-bottom-color: #1a1f2e;
+  color: #e5e7eb;
+}
+
+body.dark-theme .stats-label {
+  color: #9ca3af;
+}
+
+body.dark-theme .stats-value {
+  color: #e5e7eb;
+}
+
+/* Drag and Drop Overlay */
+.drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(37, 99, 235, 0.9);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drag-overlay-content {
+  background: white;
+  padding: 48px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.drag-overlay-content svg {
+  color: #2563eb;
+  margin-bottom: 16px;
+}
+
+.drag-overlay-content p {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 8px 0;
+}
+
+.drag-hint {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
 }
 
 .split-dialog-overlay {
@@ -199,6 +392,24 @@
 
 .export-menu-item:not(:last-child) {
   border-bottom: 1px solid #f0f0f0;
+}
+
+.export-menu-section {
+  padding: 8px 0;
+}
+
+.export-menu-section:not(:last-child) {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.export-menu-header {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  background: #fafafa;
 }
 
 .flight-stats-menu {

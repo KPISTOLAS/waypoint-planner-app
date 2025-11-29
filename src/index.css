@@ -12,6 +12,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #f5f5f5;
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Theme */
+body.dark-theme {
+  background: #0a0e1a;
+  color: #e5e7eb;
+}
+
+body.dark-theme #root {
+  background: #0a0e1a;
 }
 
 #root {

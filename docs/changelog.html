@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Changelog - Waypoint Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --bg-white: #ffffff;
+            --bg-gray: #f9fafb;
+            --bg-gray-light: #f3f4f6;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-white);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border);
+            padding: 24px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        .btn-download {
+            background: var(--primary);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-download:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 60px 0;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero h1 {
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Changelog Section */
+        .changelog {
+            padding: 80px 0;
+        }
+
+        .version-card {
+            background: var(--bg-white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 32px;
+            transition: box-shadow 0.2s;
+        }
+
+        .version-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .version-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .version-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .version-date {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .version-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-current {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-legacy {
+            background: var(--bg-gray);
+            color: var(--text-secondary);
+        }
+
+        .version-content {
+            display: grid;
+            gap: 32px;
+        }
+
+        .feature-category {
+            margin-bottom: 24px;
+        }
+
+        .category-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-item {
+            padding: 12px 0;
+            padding-left: 24px;
+            position: relative;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .feature-item::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .feature-item strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .improvements-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .improvement-item {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            color: var(--text-secondary);
+        }
+
+        .improvement-item::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--info);
+            font-weight: 700;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--bg-gray);
+            border-top: 1px solid var(--border);
+            padding: 48px 0;
+            text-align: center;
+        }
+
+        footer p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .version-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .version-card {
+                padding: 24px;
+            }
+
+            nav {
+                gap: 16px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">Waypoint Planner</a>
+                <nav>
+                    <a href="index.html">Home</a>
+                    <a href="guide.html">Documentation</a>
+                    <a href="changelog.html" style="color: var(--primary);">Changelog</a>
+                    <a href="https://drive.google.com/drive/folders/1zrWqDmw6SRSkqjNskl6aVDuTTGAz0uAP?usp=drive_link" target="_blank" class="btn-download">Download</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>Version Changelog</h1>
+                <p>Track all updates, new features, and improvements across Waypoint Planner versions</p>
+            </div>
+        </section>
+
+        <section class="changelog">
+            <div class="container">
+                <!-- Version 1.2.0 -->
+                <div class="version-card">
+                    <div class="version-header">
+                        <div class="version-title">
+                            <span class="version-number">v1.2.0</span>
+                            <span class="version-badge badge-current">Current</span>
+                        </div>
+                        <span class="version-date">December 2024</span>
+                    </div>
+                    <div class="version-content">
+                        <div class="feature-category">
+                            <h3 class="category-title">New Features</h3>
+                            <ul class="feature-list">
+                                <li class="feature-item"><strong>Photoshop-Style Interface</strong> - Complete UI redesign with draggable, floating panels that can be moved and resized anywhere on screen</li>
+                                <li class="feature-item"><strong>Advanced Photogrammetry Tools</strong> - Comprehensive photogrammetry calculator including GSD (Ground Sample Distance), coverage area calculator, image count estimator, processing time calculator, and camera settings recommendations</li>
+                                <li class="feature-item"><strong>Offline-First Architecture</strong> - Full offline functionality with local-first data storage using IndexedDB, automatic background sync when online, and Progressive Web App (PWA) capabilities</li>
+                                <li class="feature-item"><strong>Keyboard Shortcuts</strong> - Global keyboard shortcuts for common actions (Ctrl+S to save, etc.)</li>
+                                <li class="feature-item"><strong>Dark/Light Theme Toggle</strong> - System-wide theme switching with enhanced dark mode</li>
+                                <li class="feature-item"><strong>Customizable UI Layouts</strong> - Four different layout options (Default, Compact, Wide, Minimal) accessible from Settings panel</li>
+                                <li class="feature-item"><strong>Waypoint Search/Filter</strong> - Search and filter waypoints by various criteria</li>
+                                <li class="feature-item"><strong>Measurement Tools</strong> - Distance and area measurement tools directly on the map</li>
+                                <li class="feature-item"><strong>Waypoint Clustering</strong> - Visual clustering of waypoints for large missions</li>
+                                <li class="feature-item"><strong>Print-Friendly Flight Plan View</strong> - Generate printable flight plan reports</li>
+                                <li class="feature-item"><strong>Drag-and-Drop File Import</strong> - Import flight plans by dragging files onto the application</li>
+                                <li class="feature-item"><strong>Export Presets</strong> - Save and reuse custom export configurations</li>
+                                <li class="feature-item"><strong>Floating Waypoint Editor</strong> - Non-intrusive waypoint editor that doesn't hide other information</li>
+                            </ul>
+                        </div>
+                        <div class="feature-category">
+                            <h3 class="category-title">Improvements</h3>
+                            <ul class="improvements-list">
+                                <li class="improvement-item">Enhanced dark theme with deeper, more professional color palette</li>
+                                <li class="improvement-item">Improved panel management with position persistence</li>
+                                <li class="improvement-item">Better organization of tools and settings</li>
+                                <li class="improvement-item">Optimized performance for large flight plans</li>
+                                <li class="improvement-item">Enhanced offline capabilities and data persistence</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version 1.1.0 -->
+                <div class="version-card">
+                    <div class="version-header">
+                        <div class="version-title">
+                            <span class="version-number">v1.1.0</span>
+                            <span class="version-badge badge-legacy">Previous</span>
+                        </div>
+                        <span class="version-date">July 2024</span>
+                    </div>
+                    <div class="version-content">
+                        <div class="feature-category">
+                            <h3 class="category-title">New Features</h3>
+                            <ul class="feature-list">
+                                <li class="feature-item"><strong>Welcome Page & Project Management</strong> - New welcome screen with project browser, recent projects list, and quick project creation interface</li>
+                                <li class="feature-item"><strong>Auto-Save System</strong> - Automatic saving of flight plans to prevent data loss during work</li>
+                                <li class="feature-item"><strong>Battery Usage Calculator</strong> - Estimate battery consumption and maximum safe flight distance based on drone model and flight parameters</li>
+                                <li class="feature-item"><strong>Enhanced Export Options</strong> - Multiple export formats including CSV for spreadsheet analysis, comprehensive PDF flight reports, DJI FlightHub JSON format, and Litchi CSV format</li>
+                                <li class="feature-item"><strong>Flight Statistics Dashboard</strong> - View detailed flight statistics including total distance, estimated flight time, battery usage, and waypoint count</li>
+                                <li class="feature-item"><strong>Terrain Elevation Integration</strong> - Apply terrain elevation data to waypoints for accurate altitude planning</li>
+                                <li class="feature-item"><strong>Waypoint Templates</strong> - Pre-configured waypoint patterns for common mission types</li>
+                                <li class="feature-item"><strong>Toast Notification System</strong> - User-friendly notifications for actions, errors, and system messages</li>
+                                <li class="feature-item"><strong>Professional Documentation</strong> - Complete user guide and professional website documentation</li>
+                            </ul>
+                        </div>
+                        <div class="feature-category">
+                            <h3 class="category-title">Improvements</h3>
+                            <ul class="improvements-list">
+                                <li class="improvement-item">Enhanced UI/UX with improved styling and user feedback throughout the application</li>
+                                <li class="improvement-item">Better error handling and user notifications for improved reliability</li>
+                                <li class="improvement-item">Improved waypoint management interface with better organization</li>
+                                <li class="improvement-item">Enhanced settings panel with better categorization and controls</li>
+                                <li class="improvement-item">Optimized build configuration for better performance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version 1.0.0 -->
+                <div class="version-card">
+                    <div class="version-header">
+                        <div class="version-title">
+                            <span class="version-number">v1.0.0</span>
+                            <span class="version-badge badge-legacy">Initial Release</span>
+                        </div>
+                        <span class="version-date">2024</span>
+                    </div>
+                    <div class="version-content">
+                        <div class="feature-category">
+                            <h3 class="category-title">Core Features</h3>
+                            <ul class="feature-list">
+                                <li class="feature-item"><strong>Waypoint Creation</strong> - Create waypoints by clicking on the map or manually entering coordinates</li>
+                                <li class="feature-item"><strong>DJI Drone Support</strong> - Comprehensive support for multiple DJI models including Mini 5 Pro, Mavic 4 Pro, Mini 4 Pro, Air 3/3S, and Mavic 3 series</li>
+                                <li class="feature-item"><strong>Interactive Map</strong> - Visualize and edit flight plans on an interactive map with multiple map styles (Dark, Satellite, Terrain, Light, OpenStreetMap)</li>
+                                <li class="feature-item"><strong>Flight Plan Management</strong> - Save and load flight plans as JSON files</li>
+                                <li class="feature-item"><strong>Drawing Tools</strong> - Create waypoints from polygons, rectangles, and circular POI areas</li>
+                                <li class="feature-item"><strong>Mission Splitting</strong> - Split large missions into smaller, manageable parts for battery management</li>
+                            </ul>
+                        </div>
+                        <div class="feature-category">
+                            <h3 class="category-title">Premium Features</h3>
+                            <ul class="feature-list">
+                                <li class="feature-item"><strong>Dynamic Altitude Adjustment</strong> - Automatically adjust altitude based on terrain elevation</li>
+                                <li class="feature-item"><strong>Waypoint Actions</strong> - Add actions at waypoints (take photo, start/stop recording, rotate gimbal, hover)</li>
+                                <li class="feature-item"><strong>Reverse Points</strong> - Reverse the order of waypoints in the flight path</li>
+                                <li class="feature-item"><strong>Line Orientation</strong> - Rotate flight paths by specified angle (0-360°)</li>
+                                <li class="feature-item"><strong>Straightened Flight Paths</strong> - Optimize paths by removing unnecessary waypoints</li>
+                                <li class="feature-item"><strong>KMZ Import/Export</strong> - Import and export flight plans in KMZ format for DJI apps (DJI Fly, DJI Pilot)</li>
+                                <li class="feature-item"><strong>KML/WGS84 Import</strong> - Import polygon data from KML files and coordinate files (WGS84, TXT)</li>
+                                <li class="feature-item"><strong>Image Overlap Control</strong> - Configure forward and side overlap percentages for photogrammetry (0-100%)</li>
+                                <li class="feature-item"><strong>Flight Presets</strong> - Quick configuration presets for 3D Modeling, Mapping, Scanning, and Inspection missions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Waypoint Planner. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
+

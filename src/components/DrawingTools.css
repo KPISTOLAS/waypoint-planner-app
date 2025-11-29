@@ -104,3 +104,52 @@
   background-color: #f4f4f4;
 }
 
+/* Dark Theme */
+body.dark-theme .drawing-confirm-panel {
+  background: #0f1419;
+  border: 1px solid #1a1f2e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .drawing-confirm-content {
+  background: #0f1419;
+}
+
+body.dark-theme .drawing-confirm-header h3 {
+  color: #e5e7eb;
+}
+
+body.dark-theme .drawing-confirm-header p {
+  color: #d1d5db;
+}
+
+body.dark-theme .confirm-btn {
+  background: #2563eb;
+  color: white;
+}
+
+body.dark-theme .confirm-btn:hover {
+  background: #1e40af;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+body.dark-theme .cancel-btn {
+  background: #1a1f2e;
+  color: #e5e7eb;
+  border-color: #2d3748;
+}
+
+body.dark-theme .cancel-btn:hover {
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+body.dark-theme .leaflet-draw-toolbar a {
+  background-color: #0f1419;
+  border-color: #1a1f2e;
+}
+
+body.dark-theme .leaflet-draw-toolbar a:hover {
+  background-color: #1a1f2e;
+}
+

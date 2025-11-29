@@ -1,0 +1,142 @@
+.draggable-panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  transition: box-shadow 0.2s;
+}
+
+.draggable-panel:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.draggable-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(to bottom, #f8f9fa, #f0f2f5);
+  border-bottom: 1px solid #e0e0e0;
+  cursor: move;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.draggable-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.drag-handle {
+  color: #999;
+  cursor: move;
+}
+
+.panel-icon {
+  display: flex;
+  align-items: center;
+}
+
+.draggable-panel-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.panel-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.panel-action-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.draggable-panel-content {
+  flex: 1;
+  overflow: auto;
+  background: white;
+  min-height: 0;
+}
+
+.draggable-panel-resizer {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #ccc 40%, #ccc 50%, transparent 50%, transparent 60%, #ccc 60%, #ccc 100%);
+  background-size: 8px 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.draggable-panel:hover .draggable-panel-resizer {
+  opacity: 0.5;
+}
+
+.draggable-panel-resizer:hover {
+  opacity: 1;
+}
+
+/* Dark Theme */
+body.dark-theme .draggable-panel {
+  background: #0f1419;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .draggable-panel:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+body.dark-theme .draggable-panel-header {
+  background: linear-gradient(to bottom, #1a1f2e, #0f1419);
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .draggable-panel-title {
+  color: #e5e7eb;
+}
+
+body.dark-theme .drag-handle {
+  color: #6b7280;
+}
+
+body.dark-theme .panel-action-btn {
+  color: #9ca3af;
+}
+
+body.dark-theme .panel-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+}
+
+body.dark-theme .draggable-panel-content {
+  background: #0f1419;
+}
+
+body.dark-theme .draggable-panel-resizer {
+  background: linear-gradient(135deg, transparent 0%, transparent 40%, #4b5563 40%, #4b5563 50%, transparent 50%, transparent 60%, #4b5563 60%, #4b5563 100%);
+  background-size: 8px 8px;
+}
+

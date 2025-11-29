@@ -5,6 +5,12 @@
   background: white;
   overflow: hidden;
   min-height: 0;
+  height: 100%;
+}
+
+/* Dark Theme */
+body.dark-theme .waypoint-panel {
+  background: #0f1419;
 }
 
 .waypoint-panel-content {
@@ -33,6 +39,112 @@
   color: #2c3e50;
   margin: 0;
   letter-spacing: 0.3px;
+}
+
+body.dark-theme .panel-header {
+  background: #0f1419;
+  border-bottom-color: #1a1f2e;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .panel-header h2 {
+  color: #e5e7eb;
+}
+
+.waypoint-search-container {
+  position: relative;
+  padding: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.waypoint-search-input {
+  width: 100%;
+  padding: 8px 32px 8px 32px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.waypoint-search-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+body.dark-theme .waypoint-search-container {
+  background: #0f1419;
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .waypoint-search-input {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #e5e7eb;
+}
+
+body.dark-theme .waypoint-search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+body.dark-theme .waypoint-search-container .search-icon {
+  color: #6b7280;
+}
+
+body.dark-theme .search-clear-btn {
+  color: #6b7280;
+}
+
+body.dark-theme .search-clear-btn:hover {
+  background: #1a1f2e;
+  color: #e5e7eb;
+}
+
+.waypoint-search-container .search-icon {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  pointer-events: none;
+}
+
+.search-clear-btn {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.search-clear-btn:hover {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.waypoint-cluster-controls {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e8e8e8;
+  background: #fafafa;
+  font-size: 12px;
+}
+
+body.dark-theme .waypoint-cluster-controls {
+  background: #0f1419;
+  border-bottom-color: #1a1f2e;
+  color: #d1d5db;
 }
 
 .waypoint-list {
@@ -87,6 +199,24 @@
   background: linear-gradient(to right, #e3f2fd, #bbdefb);
   border-color: #1976d2;
   box-shadow: 0 4px 16px rgba(25, 118, 210, 0.25);
+}
+
+body.dark-theme .waypoint-item {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .waypoint-item:hover {
+  background: #1e3a8a;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+body.dark-theme .waypoint-item.selected {
+  background: #1e3a8a;
+  border-color: #2563eb;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
 }
 
 .waypoint-number {
@@ -152,6 +282,26 @@
   font-size: 11px;
   color: #4a90e2;
   margin-top: 4px;
+}
+
+body.dark-theme .waypoint-coords {
+  color: #e5e7eb;
+}
+
+body.dark-theme .waypoint-details {
+  color: #9ca3af;
+}
+
+body.dark-theme .waypoint-actions {
+  color: #60a5fa;
+}
+
+body.dark-theme .empty-state {
+  color: #6b7280;
+}
+
+body.dark-theme .empty-hint {
+  color: #4b5563;
 }
 
 .delete-btn {

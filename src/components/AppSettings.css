@@ -1,0 +1,259 @@
+.app-settings-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  z-index: 1000;
+  transition: all 0.2s;
+}
+
+.app-settings-toggle:hover {
+  background: #1e40af;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.app-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.app-settings-panel {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.app-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-settings-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.app-settings-content {
+  padding: 24px;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.settings-section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.theme-toggle-container {
+  display: flex;
+  gap: 12px;
+}
+
+.theme-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.theme-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.theme-btn.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: white;
+}
+
+.layout-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.layout-option {
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.layout-option:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.layout-option.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.layout-option-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.layout-option-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+}
+
+.layout-option-description {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Dark theme styles */
+body.dark-theme {
+  background: #0a0e1a;
+  color: #e5e7eb;
+}
+
+body.dark-theme .app-settings-panel {
+  background: #0f1419;
+  color: #e5e7eb;
+  border: 1px solid #1a1f2e;
+}
+
+body.dark-theme .app-settings-header {
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .app-settings-header h2 {
+  color: #f9fafb;
+}
+
+body.dark-theme .close-btn {
+  color: #9ca3af;
+}
+
+body.dark-theme .close-btn:hover {
+  background: #1a1f2e;
+  color: #e5e7eb;
+}
+
+body.dark-theme .settings-section-header h3 {
+  color: #f9fafb;
+}
+
+body.dark-theme .theme-btn {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #d1d5db;
+}
+
+body.dark-theme .theme-btn:hover {
+  border-color: #2563eb;
+  background: #1e3a8a;
+  color: white;
+}
+
+body.dark-theme .theme-btn.active {
+  background: #2563eb;
+  color: white;
+}
+
+body.dark-theme .layout-option {
+  background: #1a1f2e;
+  border-color: #2d3748;
+}
+
+body.dark-theme .layout-option:hover {
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+body.dark-theme .layout-option.active {
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+body.dark-theme .layout-option-name {
+  color: #f9fafb;
+}
+
+body.dark-theme .layout-option-description {
+  color: #9ca3af;
+}
+

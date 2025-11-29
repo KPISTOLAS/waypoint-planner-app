@@ -27,3 +27,5 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Internal planning documents
+ROADMAP.txt

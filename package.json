@@ -1,6 +1,6 @@
 {
   "name": "waypoint-planner",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "DJI Drone Waypoint Flight Planner with Premium Features",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "electron:dev": "node scripts/dev.js",
     "electron:pack": "electron-builder",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "generate-icons": "node scripts/generate-icons.js"
   },
   "keywords": [
     "drone",
@@ -21,7 +22,7 @@
     "flight-plan",
     "photogrammetry"
   ],
-  "author": "",
+  "author": "KPISTOLAS",
   "license": "MIT",
   "homepage": "https://github.com/KPISTOLAS/waypoint-planner",
   "repository": {
@@ -37,6 +38,7 @@
     "concurrently": "^8.2.2",
     "electron": "^35.7.5",
     "electron-builder": "^24.9.1",
+    "sharp": "^0.34.5",
     "typescript": "^5.3.3",
     "vite": "^6.2.0",
     "wait-on": "^7.2.0"
@@ -75,18 +77,13 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
-          "arch": ["x64"]
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "artifactName": "${productName}-${version}-Setup.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Waypoint Planner"
+      "artifactName": "${productName}-${version}-Portable.${ext}"
     },
     "mac": {
       "target": "dmg"

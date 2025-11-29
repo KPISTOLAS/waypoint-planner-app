@@ -7,6 +7,7 @@ This folder contains the documentation website for Waypoint Planner, designed to
 - **index.html** - Main landing page with introduction and features
 - **intro.html** - Alternative introduction page (same content as index.html)
 - **guide.html** - Complete user guide with all features and instructions
+- **changelog.html** - Version history and changelog showing updates across all versions
 
 ## GitHub Pages Setup
 
@@ -41,7 +42,13 @@ To test the pages locally before pushing:
 
 - Main page: `index.html` (or root URL)
 - User Guide: `guide.html`
-- Download: Links to GitHub Releases
+- Changelog: `changelog.html` - View version history and updates
+- Download: Links to Google Drive (large file hosting)
 
 All links use relative paths, so they work both locally and on GitHub Pages.
+
+## Version
+
+Current version: 1.2.0
+Last updated: December 2024
 

@@ -37,7 +37,7 @@ This will:
 After the build completes, you'll find the executable in:
 
 ```
-release/Waypoint Planner-1.0.0-x64.exe
+release/Waypoint Planner-1.1.0-Portable.exe
 ```
 
 This is a **portable executable** - it contains everything needed to run the application.
@@ -127,5 +127,5 @@ For Windows portable .exe:
 npm run build:app
 ```
 
-The executable will be in: `release/Waypoint Planner-1.0.0-x64.exe`
+The executable will be in: `release/Waypoint Planner-1.1.0-Portable.exe`
 

@@ -3,15 +3,16 @@
   top: 80px;
   right: 16px;
   z-index: 2000;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(74, 144, 226, 0.25), 0 0 0 1px rgba(74, 144, 226, 0.1);
   padding: 12px;
   min-width: 200px;
   pointer-events: auto;
   border: 2px solid #4a90e2;
   transition: all 0.3s ease;
   overflow: hidden;
+  backdrop-filter: blur(10px);
 }
 
 .drawing-toolbar.hidden {
@@ -28,6 +29,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(74, 144, 226, 0.2);
 }
 
 .drawing-toolbar-title {
@@ -113,5 +116,62 @@
 .drawing-btn.cursor-btn.active {
   border-top-color: #4a90e2;
   border-bottom-color: #4a90e2;
+}
+
+/* Dark Theme */
+body.dark-theme .drawing-toolbar {
+  background: linear-gradient(135deg, #0f1a2e 0%, #1a2332 100%);
+  border-color: #2563eb;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3), 0 0 0 1px rgba(37, 99, 235, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+body.dark-theme .drawing-toolbar-header {
+  border-bottom-color: rgba(37, 99, 235, 0.3);
+}
+
+body.dark-theme .drawing-toolbar-title {
+  color: #e5e7eb;
+}
+
+body.dark-theme .drawing-toolbar-toggle {
+  color: #9ca3af;
+}
+
+body.dark-theme .drawing-toolbar-toggle:hover {
+  background: #1a1f2e;
+  color: #e5e7eb;
+}
+
+body.dark-theme .drawing-btn {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #e5e7eb;
+}
+
+body.dark-theme .drawing-btn:hover {
+  background: #1e3a8a;
+  border-color: #2563eb;
+}
+
+body.dark-theme .drawing-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+body.dark-theme .drawing-btn.active:hover {
+  background: #1e40af;
+  border-color: #1e40af;
+}
+
+body.dark-theme .drawing-toolbar-buttons > .cursor-btn {
+  border-top-color: #1a1f2e;
+  border-bottom-color: #1a1f2e;
+}
+
+body.dark-theme .drawing-btn.cursor-btn.active {
+  border-top-color: #2563eb;
+  border-bottom-color: #2563eb;
 }
 

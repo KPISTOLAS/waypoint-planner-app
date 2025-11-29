@@ -1,0 +1,234 @@
+.waypoint-editor-panel {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 380px;
+  max-height: 600px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.editor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(to right, #4a90e2, #357abd);
+  color: white;
+  border-bottom: none;
+}
+
+.editor-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.editor-panel-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.editor-panel-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.editor-panel-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: calc(600px - 60px);
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+}
+
+.editor-field input {
+  padding: 10px 14px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  background: white;
+}
+
+.editor-field input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.editor-section label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #e9f5ff;
+  border-color: #4a90e2;
+  color: #4a90e2;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.action-item button {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.action-item button:hover {
+  background: #fee;
+  color: #c33;
+}
+
+/* Dark theme support */
+body.dark-theme .waypoint-editor-panel {
+  background: #0f1419;
+  border-color: #1a1f2e;
+}
+
+body.dark-theme .editor-panel-content {
+  background: #0f1419;
+}
+
+body.dark-theme .editor-field label {
+  color: #d1d5db;
+}
+
+body.dark-theme .editor-field input {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #e5e7eb;
+}
+
+body.dark-theme .editor-field input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+body.dark-theme .editor-section {
+  border-top-color: #1a1f2e;
+}
+
+body.dark-theme .editor-section label {
+  color: #f9fafb;
+}
+
+body.dark-theme .action-btn {
+  background: #1a1f2e;
+  border-color: #2d3748;
+  color: #d1d5db;
+}
+
+body.dark-theme .action-btn:hover {
+  background: #1e3a8a;
+  border-color: #2563eb;
+  color: white;
+}
+
+body.dark-theme .action-item {
+  background: #1a1f2e;
+  color: #d1d5db;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .waypoint-editor-panel {
+    width: 340px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .waypoint-editor-panel {
+    width: 320px;
+    bottom: 16px;
+    right: 16px;
+  }
+}
+

@@ -4,35 +4,29 @@
   height: 100vh;
   width: 100vw;
   background: linear-gradient(to bottom, #f8f9fa, #f0f2f5);
+  overflow: hidden;
+}
+
+body.dark-theme .main-layout {
+  background: #0a0e1a;
 }
 
 .main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
-}
-
-.left-panel {
-  width: 400px;
-  min-width: 350px;
-  display: flex;
-  flex-direction: column;
-  background: white;
-  border-right: 2px solid #e8e8e8;
-  overflow-y: auto;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .map-container {
   flex: 1;
   position: relative;
   background: #e8e8e8;
+  width: 100%;
+  height: 100%;
 }
 
-@media (max-width: 1200px) {
-  .left-panel {
-    width: 350px;
-    min-width: 300px;
-  }
+body.dark-theme .map-container {
+  background: #0a0e1a;
 }
 

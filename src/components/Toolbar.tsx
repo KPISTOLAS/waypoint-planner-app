@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useAtom, useSetAtom } from 'jotai'
 import { currentFlightPlanAtom, waypointsAtom, flightSettingsAtom, droneModelAtom } from '../store/flightPlanStore'
 import { addToastAtom } from '../store/toastStore'
+import { exportPresetsAtom } from '../store/exportPresetsStore'
+import { panelsAtom, togglePanelAtom } from '../store/panelStore'
 import { FlightPlan } from '../types'
 import { exportToKMZ, importFromKMZ, parseKMLPolygon, parseWGS84, generateWaypointsFromPolygonCoords } from '../utils/kmzHandler'
 import { splitMission, getRecommendedSplit } from '../utils/missionSplitter'
@@ -10,7 +12,7 @@ import { estimateBatteryUsage, calculateMaxSafeDistance } from '../utils/battery
 import { exportToCSV, exportToDJIFlightHub, exportToLitchi, generatePDFReport } from '../utils/exportFormats'
 import { initAutoSave, stopAutoSave } from '../utils/autoSave'
 import JSZip from 'jszip'
-import { Save, FolderOpen, Download, Upload, Trash2, Scissors, HelpCircle, FileText, FileSpreadsheet, FileJson, Battery, Clock, AlertTriangle } from 'lucide-react'
+import { Save, FolderOpen, Download, Upload, Trash2, Scissors, HelpCircle, FileText, FileSpreadsheet, FileJson, Battery, Clock, AlertTriangle, Printer, Bookmark, Sliders, MapPin, Camera } from 'lucide-react'
 import './Toolbar.css'
 
 const Toolbar: React.FC = () => {
@@ -22,6 +24,10 @@ const Toolbar: React.FC = () => {
   const [waypointsPerMission, setWaypointsPerMission] = useState(50)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [showFlightStats, setShowFlightStats] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [exportPresets] = useAtom(exportPresetsAtom)
+  const [panels] = useAtom(panelsAtom)
+  const togglePanel = useSetAtom(togglePanelAtom)
   const exportMenuRef = React.useRef<HTMLDivElement>(null)
   const statsMenuRef = React.useRef<HTMLDivElement>(null)
   const addToast = useSetAtom(addToastAtom)
@@ -132,6 +138,234 @@ const Toolbar: React.FC = () => {
       }
     }
   }, [flightPlan, handleSave])
+
+  // Drag and drop file import
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
+    }
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
+
+      const files = e.dataTransfer?.files
+      if (!files || files.length === 0) return
+
+      const file = files[0]
+      const fileName = file.name.toLowerCase()
+
+      try {
+        if (fileName.endsWith('.json')) {
+          const text = await file.text()
+          const data = JSON.parse(text)
+          if (data.waypoints && data.settings) {
+            setWaypoints(data.waypoints)
+            setFlightPlan(data)
+            addToast(`Flight plan "${data.name || 'Untitled'}" loaded from ${file.name}`, 'success')
+          }
+        } else if (fileName.endsWith('.kmz') || fileName.endsWith('.kml')) {
+          await handleImportFile(file)
+        } else if (fileName.endsWith('.txt') || fileName.endsWith('.wgs84')) {
+          await handleImportFile(file)
+        } else {
+          addToast('Unsupported file type. Please use JSON, KMZ, KML, or WGS84 files.', 'error')
+        }
+      } catch (error) {
+        console.error('Error importing file:', error)
+        addToast('Failed to import file. Please check the file format.', 'error')
+      }
+    }
+
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('dragleave', handleDragLeave)
+    window.addEventListener('drop', handleDrop)
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('dragleave', handleDragLeave)
+      window.removeEventListener('drop', handleDrop)
+    }
+  }, [setWaypoints, setFlightPlan, addToast])
+
+  const handleImportFile = async (file: File) => {
+    const fileName = file.name.toLowerCase()
+    const fileExtension = fileName.split('.').pop() || ''
+    
+    try {
+      if (fileExtension === 'kmz') {
+        const kmzData = await importFromKMZ(file)
+        if (kmzData.waypoints.length > 0) {
+          const newPlan: FlightPlan = {
+            id: Date.now().toString(),
+            name: kmzData.name || 'Imported Flight Plan',
+            droneModel,
+            waypoints: kmzData.waypoints,
+            settings,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+          setFlightPlan(newPlan)
+          setWaypoints(kmzData.waypoints)
+          addToast(`Successfully imported ${kmzData.waypoints.length} waypoints from KMZ file.`, 'success')
+        } else {
+          addToast('KMZ file contains no waypoints.', 'warning')
+        }
+      } else if (fileExtension === 'kml') {
+        const content = await file.text()
+        const polygonData = parseKMLPolygon(content)
+        
+        if (polygonData.coordinates.length >= 3) {
+          const generatedWaypoints = generateWaypointsFromPolygonCoords(polygonData.coordinates, settings)
+          
+          if (generatedWaypoints.length > 0) {
+            const newPlan: FlightPlan = {
+              id: Date.now().toString(),
+              name: polygonData.name || 'Imported Polygon Plan',
+              droneModel,
+              waypoints: generatedWaypoints,
+              settings,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }
+            setFlightPlan(newPlan)
+            setWaypoints(generatedWaypoints)
+            addToast(`Successfully created polygon plan with ${generatedWaypoints.length} waypoints from KML file.`, 'success')
+          } else {
+            addToast('Failed to generate waypoints from polygon.', 'error')
+          }
+        } else {
+          addToast('KML file does not contain a valid polygon (needs at least 3 coordinates).', 'warning')
+        }
+      } else if (fileExtension === 'wgs84' || fileExtension === 'txt') {
+        const content = await file.text()
+        const wgs84Data = parseWGS84(content)
+        
+        if (wgs84Data.coordinates.length >= 3) {
+          const generatedWaypoints = generateWaypointsFromPolygonCoords(wgs84Data.coordinates, settings)
+          
+          if (generatedWaypoints.length > 0) {
+            const newPlan: FlightPlan = {
+              id: Date.now().toString(),
+              name: wgs84Data.name || 'Imported WGS84 Plan',
+              droneModel,
+              waypoints: generatedWaypoints,
+              settings,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }
+            setFlightPlan(newPlan)
+            setWaypoints(generatedWaypoints)
+            addToast(`Successfully created polygon plan with ${generatedWaypoints.length} waypoints from WGS84 file.`, 'success')
+          } else {
+            addToast('Failed to generate waypoints from coordinates.', 'error')
+          }
+        } else {
+          addToast('WGS84 file must contain at least 3 coordinate pairs.', 'warning')
+        }
+      } else if (fileExtension === 'json') {
+        const text = await file.text()
+        const data = JSON.parse(text)
+        if (data.waypoints && data.settings) {
+          setFlightPlan(data)
+          setWaypoints(data.waypoints)
+          addToast(`Flight plan "${data.name || 'Untitled'}" loaded from ${file.name}`, 'success')
+        }
+      } else {
+        addToast('Unsupported file type. Please use JSON, KMZ, KML, or WGS84 files.', 'error')
+      }
+    } catch (error) {
+      console.error('Error importing file:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to import file: ${errorMessage}`, 'error')
+    }
+  }
+
+  const handlePrint = () => {
+    if (!flightPlan || waypoints.length === 0) {
+      addToast('No flight plan to print. Please create or load a project first.', 'warning')
+      return
+    }
+
+    // Generate print-friendly HTML
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      addToast('Please allow popups to print the flight plan.', 'warning')
+      return
+    }
+
+    const flightPath = calculateFlightPath(waypoints, settings)
+    const batteryEstimate = estimateBatteryUsage(waypoints, settings, droneModel)
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Flight Plan - ${flightPlan.name}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #2c3e50; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background: #f5f5f5; }
+            .stats { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>${flightPlan.name}</h1>
+          <div class="stats">
+            <h2>Flight Statistics</h2>
+            <p><strong>Total Waypoints:</strong> ${waypoints.length}</p>
+            <p><strong>Total Distance:</strong> ${(flightPath.totalDistance / 1000).toFixed(2)} km</p>
+            <p><strong>Estimated Flight Time:</strong> ${flightPath.estimatedTime.toFixed(1)} minutes</p>
+            <p><strong>Battery Usage:</strong> ${batteryEstimate.batteryUsage.toFixed(1)}%</p>
+            <p><strong>Drone Model:</strong> ${droneModel}</p>
+          </div>
+          <h2>Waypoints</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Altitude (m)</th>
+                <th>Speed (m/s)</th>
+                <th>Gimbal (°)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${waypoints.map((wp, idx) => `
+                <tr>
+                  <td>${idx + 1}</td>
+                  <td>${wp.latitude.toFixed(6)}</td>
+                  <td>${wp.longitude.toFixed(6)}</td>
+                  <td>${wp.altitude}</td>
+                  <td>${wp.speed || settings.speed}</td>
+                  <td>${wp.gimbalPitch || settings.gimbalAngle}</td>
+                  <td>${wp.actions?.map(a => a.type).join(', ') || 'None'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.focus()
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
+  }
 
   const handleOpen = async () => {
     try {
@@ -573,7 +807,30 @@ const Toolbar: React.FC = () => {
       <div className="toolbar-left">
         <h1 className="app-title">Waypoint Planner</h1>
         <div className="toolbar-separator"></div>
-        <div className="toolbar-section-label">Flight Settings</div>
+        <button
+          className={`toolbar-btn ${panels['flight-settings']?.isOpen ? 'active' : ''}`}
+          onClick={() => togglePanel('flight-settings')}
+          title="Toggle Flight Settings Panel"
+        >
+          <Sliders size={18} />
+          <span>Settings</span>
+        </button>
+        <button
+          className={`toolbar-btn ${panels['waypoints']?.isOpen ? 'active' : ''}`}
+          onClick={() => togglePanel('waypoints')}
+          title="Toggle Waypoints Panel"
+        >
+          <MapPin size={18} />
+          <span>Waypoints</span>
+        </button>
+        <button
+          className={`toolbar-btn ${panels['photogrammetry-tools']?.isOpen ? 'active' : ''}`}
+          onClick={() => togglePanel('photogrammetry-tools')}
+          title="Toggle Photogrammetry Tools Panel"
+        >
+          <Camera size={18} />
+          <span>Photogrammetry</span>
+        </button>
       </div>
       <div className="toolbar-right">
         <button className="toolbar-btn" onClick={handleOpen} title="Open Flight Plan">
@@ -613,26 +870,51 @@ const Toolbar: React.FC = () => {
           </button>
           {showExportMenu && (
             <div className="export-menu" onClick={(e) => e.stopPropagation()}>
-              <button className="export-menu-item" onClick={() => { handleExportKMZ(); setShowExportMenu(false); }}>
-                <Download size={16} />
-                <span>Export KMZ</span>
-              </button>
-              <button className="export-menu-item" onClick={() => { handleExportCSV(); setShowExportMenu(false); }}>
-                <FileSpreadsheet size={16} />
-                <span>Export CSV</span>
-              </button>
-              <button className="export-menu-item" onClick={() => { handleExportPDF(); setShowExportMenu(false); }}>
-                <FileText size={16} />
-                <span>Export PDF Report</span>
-              </button>
-              <button className="export-menu-item" onClick={() => { handleExportDJIFlightHub(); setShowExportMenu(false); }}>
-                <FileJson size={16} />
-                <span>Export DJI FlightHub</span>
-              </button>
-              <button className="export-menu-item" onClick={() => { handleExportLitchi(); setShowExportMenu(false); }}>
-                <FileSpreadsheet size={16} />
-                <span>Export Litchi CSV</span>
-              </button>
+              <div className="export-menu-section">
+                <div className="export-menu-header">Standard Exports</div>
+                <button className="export-menu-item" onClick={() => { handleExportKMZ(); setShowExportMenu(false); }}>
+                  <Download size={16} />
+                  <span>Export KMZ</span>
+                </button>
+                <button className="export-menu-item" onClick={() => { handleExportCSV(); setShowExportMenu(false); }}>
+                  <FileSpreadsheet size={16} />
+                  <span>Export CSV</span>
+                </button>
+                <button className="export-menu-item" onClick={() => { handleExportPDF(); setShowExportMenu(false); }}>
+                  <FileText size={16} />
+                  <span>Export PDF Report</span>
+                </button>
+                <button className="export-menu-item" onClick={() => { handleExportDJIFlightHub(); setShowExportMenu(false); }}>
+                  <FileJson size={16} />
+                  <span>Export DJI FlightHub</span>
+                </button>
+                <button className="export-menu-item" onClick={() => { handleExportLitchi(); setShowExportMenu(false); }}>
+                  <FileSpreadsheet size={16} />
+                  <span>Export Litchi CSV</span>
+                </button>
+              </div>
+              {exportPresets.length > 3 && (
+                <div className="export-menu-section">
+                  <div className="export-menu-header">Saved Presets</div>
+                  {exportPresets.slice(3).map((preset) => (
+                    <button
+                      key={preset.id}
+                      className="export-menu-item"
+                      onClick={() => {
+                        if (preset.format === 'kmz') handleExportKMZ()
+                        else if (preset.format === 'csv') handleExportCSV()
+                        else if (preset.format === 'pdf') handleExportPDF()
+                        else if (preset.format === 'djifh') handleExportDJIFlightHub()
+                        else if (preset.format === 'litchi') handleExportLitchi()
+                        setShowExportMenu(false)
+                      }}
+                    >
+                      <Bookmark size={16} />
+                      <span>{preset.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -718,6 +1000,15 @@ const Toolbar: React.FC = () => {
         <div className="toolbar-separator"></div>
         <button 
           className="toolbar-btn" 
+          onClick={handlePrint}
+          disabled={!flightPlan || waypoints.length === 0}
+          title="Print Flight Plan"
+        >
+          <Printer size={18} />
+          <span>Print</span>
+        </button>
+        <button 
+          className="toolbar-btn" 
           onClick={handleHelp}
           title="Open User Guide"
         >
@@ -725,6 +1016,17 @@ const Toolbar: React.FC = () => {
           <span>Help</span>
         </button>
       </div>
+
+      {/* Drag and Drop Overlay */}
+      {isDragging && (
+        <div className="drag-overlay">
+          <div className="drag-overlay-content">
+            <Upload size={48} />
+            <p>Drop file to import</p>
+            <p className="drag-hint">Supports: JSON, KMZ, KML, WGS84</p>
+          </div>
+        </div>
+      )}
 
       {showSplitDialog && (
         <div className="split-dialog-overlay" onClick={() => setShowSplitDialog(false)}>

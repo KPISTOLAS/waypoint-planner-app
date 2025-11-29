@@ -7,6 +7,7 @@ import { drawingModeAtom } from '../store/drawingModeStore'
 import { Waypoint } from '../types'
 import DrawingTools from './DrawingTools'
 import DrawingToolbar from './DrawingToolbar'
+import MeasurementTools from './MeasurementTools'
 import L from 'leaflet'
 import { Layers, Map as MapIcon } from 'lucide-react'
 import 'leaflet/dist/leaflet.css'
@@ -415,6 +416,7 @@ const MapView: React.FC = () => {
           <MapClickHandler />
           <MapViewSync />
           <DrawingTools />
+          <MeasurementTools />
           
           {waypoints.map((waypoint, index) => (
             <WaypointMarker key={waypoint.id} waypoint={waypoint} index={index} />

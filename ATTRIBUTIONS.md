@@ -124,4 +124,5 @@ All dependencies used in this project are licensed under permissive open-source 
 - This project does not use any proprietary or commercial libraries that require paid licenses.
 - All map tile providers used are free for non-commercial use. For commercial use, please review each provider's terms of service.
 - The attribution strings for map providers are automatically displayed on the map as required by their terms of service.
+- Last updated: Version 1.1.0 (2024)
 
