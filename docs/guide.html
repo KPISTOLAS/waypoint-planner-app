@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waypoint Planner - User Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,47 +14,107 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --bg-white: #ffffff;
+            --bg-gray: #f9fafb;
+            --bg-gray-light: #f3f4f6;
+            --border: #e5e7eb;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
+            color: var(--text-primary);
+            background: var(--bg-white);
             display: flex;
             height: 100vh;
             overflow: hidden;
         }
 
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            z-index: 200;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header a {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        header nav {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        header nav a {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        header nav a:hover {
+            color: var(--primary);
+        }
+
+        header nav .btn-download {
+            background: var(--primary);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        header nav .btn-download:hover {
+            background: var(--primary-dark);
+            color: white;
+        }
+
         /* Left Sidebar Menu */
         .sidebar {
             width: 280px;
-            background: linear-gradient(to bottom, #2c3e50, #34495e);
-            color: white;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border);
+            color: var(--text-primary);
             overflow-y: auto;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
             position: fixed;
-            height: 100vh;
+            top: 57px;
+            height: calc(100vh - 57px);
             z-index: 100;
         }
 
         .sidebar-header {
             padding: 24px 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid var(--border);
         }
 
         .sidebar-header h1 {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 4px;
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-primary);
         }
 
         .sidebar-header p {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--text-secondary);
         }
 
         .menu {
@@ -60,13 +123,13 @@
         }
 
         .menu-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border);
         }
 
         .menu-link {
             display: block;
             padding: 14px 20px;
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--text-secondary);
             text-decoration: none;
             transition: all 0.2s;
             font-size: 14px;
@@ -74,15 +137,14 @@
         }
 
         .menu-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding-left: 24px;
+            background: var(--bg-gray);
+            color: var(--text-primary);
         }
 
         .menu-link.active {
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-            color: white;
-            border-left: 3px solid #ffeb3b;
+            background: var(--bg-gray);
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
         }
 
         .menu-subitem {
@@ -94,8 +156,10 @@
         .content {
             flex: 1;
             margin-left: 280px;
+            margin-top: 57px;
             overflow-y: auto;
             background: white;
+            height: calc(100vh - 57px);
         }
 
         .content-section {
@@ -112,16 +176,16 @@
         .content-section h2 {
             font-size: 32px;
             font-weight: 700;
-            color: #2c3e50;
+            color: var(--text-primary);
             margin-bottom: 8px;
             padding-bottom: 16px;
-            border-bottom: 3px solid #4a90e2;
+            border-bottom: 2px solid var(--primary);
         }
 
         .content-section h3 {
             font-size: 24px;
             font-weight: 600;
-            color: #34495e;
+            color: var(--text-primary);
             margin-top: 32px;
             margin-bottom: 16px;
         }
@@ -129,14 +193,14 @@
         .content-section h4 {
             font-size: 18px;
             font-weight: 600;
-            color: #555;
+            color: var(--text-primary);
             margin-top: 24px;
             margin-bottom: 12px;
         }
 
         .content-section p {
             margin-bottom: 16px;
-            color: #555;
+            color: var(--text-secondary);
             line-height: 1.8;
         }
 
@@ -147,48 +211,48 @@
 
         .content-section li {
             margin-bottom: 8px;
-            color: #555;
+            color: var(--text-secondary);
             line-height: 1.7;
         }
 
         .feature-box {
-            background: linear-gradient(to right, #f8f9ff, #f0f4ff);
-            border-left: 4px solid #4a90e2;
+            background: var(--bg-gray);
+            border-left: 4px solid var(--primary);
             padding: 20px;
             margin: 20px 0;
             border-radius: 8px;
         }
 
         .feature-box h4 {
-            color: #4a90e2;
+            color: var(--primary);
             margin-top: 0;
         }
 
         .code-block {
-            background: #2c3e50;
-            color: #ecf0f1;
+            background: var(--bg-gray-light);
+            color: var(--text-primary);
             padding: 16px;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
             font-size: 13px;
             overflow-x: auto;
             margin: 16px 0;
+            border: 1px solid var(--border);
         }
 
         .step {
-            background: white;
-            border: 2px solid #e8e8e8;
+            background: var(--bg-white);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 20px;
             margin: 16px 0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .step-number {
             display: inline-block;
             width: 32px;
             height: 32px;
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: var(--primary);
             color: white;
             border-radius: 50%;
             text-align: center;
@@ -207,16 +271,16 @@
         }
 
         .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
             padding: 16px;
             margin: 20px 0;
             border-radius: 8px;
         }
 
         .info-box {
-            background: #d1ecf1;
-            border-left: 4px solid #17a2b8;
+            background: #dbeafe;
+            border-left: 4px solid var(--primary);
             padding: 16px;
             margin: 20px 0;
             border-radius: 8px;
@@ -231,37 +295,59 @@
         .table th, .table td {
             padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #e8e8e8;
+            border-bottom: 1px solid var(--border);
         }
 
         .table th {
-            background: #f8f9fa;
+            background: var(--bg-gray);
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--text-primary);
         }
 
         .table tr:hover {
-            background: #f8f9ff;
+            background: var(--bg-gray);
         }
 
         @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px 16px;
+            }
+
+            header nav {
+                gap: 16px;
+            }
+
             .sidebar {
                 width: 100%;
                 height: auto;
                 position: relative;
+                top: 0;
             }
 
             .content {
                 margin-left: 0;
+                margin-top: 0;
+                height: auto;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Header -->
+    <header>
+        <a href="index.html">Waypoint Planner</a>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="https://drive.google.com/file/d/1_aGaxvDa-oAo_Ppw9Etj45DjMFphlIWS/view?usp=drive_link" target="_blank" class="btn-download">Download</a>
+        </nav>
+    </header>
+
     <!-- Left Sidebar Menu -->
     <nav class="sidebar">
         <div class="sidebar-header">
-            <h1>🚁 Waypoint Planner</h1>
+            <h1>Waypoint Planner</h1>
             <p>Complete User Guide</p>
         </div>
         <ul class="menu">
@@ -607,10 +693,20 @@
             <h2>7. Import & Export</h2>
 
             <h3>Export Options</h3>
+            <p>The application supports multiple export formats for different use cases. Click the "Export" button in the toolbar to access all export options:</p>
+            
             <ul>
-                <li><strong>Save:</strong> Save your flight plan as a JSON file for later editing in Waypoint Planner</li>
-                <li><strong>Export KMZ:</strong> Export as KMZ file for use with DJI apps (DJI Fly, DJI Pilot) or Google Earth</li>
+                <li><strong>Save:</strong> Save your flight plan as a JSON file for later editing in Waypoint Planner. This preserves all settings and waypoint data.</li>
+                <li><strong>Export KMZ:</strong> Export as KMZ file for use with DJI apps (DJI Fly, DJI Pilot) or Google Earth. This is the standard format for DJI drone flight plans.</li>
+                <li><strong>Export CSV:</strong> Export waypoints as a CSV (Comma-Separated Values) file. Useful for data analysis, spreadsheet applications, or custom processing.</li>
+                <li><strong>Export PDF Report:</strong> Generate a comprehensive PDF report with flight statistics, battery estimates, waypoint details, and flight settings. Opens in a new window for printing or saving.</li>
+                <li><strong>Export DJI FlightHub:</strong> Export in DJI FlightHub JSON format for use with DJI's professional flight planning platform.</li>
+                <li><strong>Export Litchi CSV:</strong> Export in Litchi format for use with the Litchi app, a popular third-party DJI drone control application.</li>
             </ul>
+
+            <div class="info-box">
+                <strong>💡 Tip:</strong> The Export menu provides quick access to all export formats. Choose the format that best matches your workflow and the application you'll be using to execute the flight plan.
+            </div>
 
             <div class="warning-box">
                 <strong>⚠️ Important:</strong> You need at least one waypoint before exporting. The application will alert you if you try to export without waypoints.
