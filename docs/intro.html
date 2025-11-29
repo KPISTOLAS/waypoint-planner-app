@@ -6,7 +6,7 @@
     <title>Waypoint Planner - Professional DJI Drone Flight Planning</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,194 +15,194 @@
         }
 
         :root {
-            --primary: #0066FF;
-            --primary-dark: #0052CC;
-            --primary-light: #E6F2FF;
-            --secondary: #1A1A1A;
-            --text-primary: #0D0D0D;
-            --text-secondary: #6B7280;
-            --text-tertiary: #9CA3AF;
-            --bg-white: #FFFFFF;
-            --bg-gray: #F9FAFB;
-            --bg-gray-dark: #F3F4F6;
-            --border: #E5E7EB;
-            --success: #10B981;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --bg-white: #ffffff;
+            --bg-gray: #f9fafb;
+            --bg-gray-light: #f3f4f6;
+            --border: #e5e7eb;
+            --border-dark: #d1d5db;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0A1929 0%, #1A1A2E 50%, #16213E 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            overflow-y: auto;
+            background: var(--bg-white);
             color: var(--text-primary);
             line-height: 1.6;
+            font-size: 16px;
         }
 
-        .intro-container {
-            max-width: 1400px;
-            width: 100%;
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
             background: var(--bg-white);
-            border-radius: 24px;
-            box-shadow: var(--shadow-xl);
-            overflow: hidden;
-            margin: auto;
+            border-bottom: 1px solid var(--border);
+            padding: 24px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        /* Header Section */
-        .intro-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+        }
+
+        .btn-download {
+            background: var(--primary);
             color: white;
-            padding: 80px 60px;
+            padding: 10px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .btn-download:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0;
             text-align: center;
-            position: relative;
-            overflow: hidden;
+            border-bottom: 1px solid var(--border);
         }
 
-        .intro-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: pulse 8s ease-in-out infinite;
+        .hero h1 {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            line-height: 1.2;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
+        .hero p {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto 32px;
         }
 
-        .drone-icon {
-            font-size: 72px;
-            margin-bottom: 24px;
-            position: relative;
-            z-index: 1;
-            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .intro-title {
-            font-size: 56px;
-            font-weight: 800;
-            margin: 0 0 16px 0;
-            letter-spacing: -0.02em;
-            position: relative;
-            z-index: 1;
+        .btn {
+            padding: 12px 32px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.2s;
         }
 
-        .intro-subtitle {
-            font-size: 22px;
-            font-weight: 400;
-            opacity: 0.95;
-            margin: 0;
-            position: relative;
-            z-index: 1;
-            letter-spacing: 0.01em;
+        .btn-primary {
+            background: var(--primary);
+            color: white;
         }
 
-        /* Content Section */
-        .intro-content {
-            padding: 80px 60px;
+        .btn-primary:hover {
+            background: var(--primary-dark);
         }
 
-        .intro-section {
-            margin-bottom: 64px;
+        .btn-secondary {
+            background: var(--bg-gray);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
-        .intro-section:last-child {
-            margin-bottom: 0;
+        .btn-secondary:hover {
+            background: var(--bg-gray-light);
         }
 
-        .intro-section h2 {
+        /* Content Sections */
+        section {
+            padding: 80px 0;
+        }
+
+        .section-title {
             font-size: 36px;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 24px;
-            letter-spacing: -0.01em;
+            margin-bottom: 16px;
+            text-align: center;
         }
 
-        .intro-section p {
+        .section-subtitle {
             font-size: 18px;
-            line-height: 1.8;
             color: var(--text-secondary);
-            margin-bottom: 24px;
-            max-width: 900px;
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 64px;
         }
 
         /* Features Grid */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 32px;
-            margin: 48px 0;
+            margin-top: 48px;
         }
 
         .feature-card {
             background: var(--bg-white);
             border: 1px solid var(--border);
-            padding: 40px 32px;
-            border-radius: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--primary);
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
+            border-radius: 8px;
+            padding: 32px;
+            transition: border-color 0.2s;
         }
 
         .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary-light);
-        }
-
-        .feature-card:hover::before {
-            transform: scaleY(1);
-        }
-
-        .feature-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            display: block;
-            filter: grayscale(0.2);
-            transition: filter 0.3s ease;
-        }
-
-        .feature-card:hover .feature-icon {
-            filter: grayscale(0);
+            border-color: var(--primary);
         }
 
         .feature-card h3 {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 600;
             color: var(--text-primary);
-            margin: 0 0 12px 0;
-            letter-spacing: -0.01em;
+            margin-bottom: 12px;
         }
 
         .feature-card p {
-            font-size: 16px;
             color: var(--text-secondary);
             line-height: 1.7;
-            margin: 0;
         }
 
         /* Use Cases */
@@ -210,253 +210,150 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
+            justify-content: center;
             margin-top: 32px;
         }
 
-        .use-case {
-            background: var(--bg-gray-dark);
+        .use-case-tag {
+            background: var(--bg-gray);
             color: var(--text-primary);
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 500;
             border: 1px solid var(--border);
-            transition: all 0.2s ease;
-            display: inline-block;
-        }
-
-        .use-case:hover {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* Actions */
-        .intro-actions {
-            display: flex;
-            gap: 16px;
-            margin: 64px 0 0 0;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .intro-actions a {
-            padding: 16px 32px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            letter-spacing: 0.01em;
-            border: none;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        .btn-download {
-            background: var(--text-primary);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .btn-download:hover {
-            background: #2D2D2D;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .btn-download:active {
-            transform: translateY(0);
         }
 
         /* Footer */
-        .intro-footer {
+        footer {
             background: var(--bg-gray);
-            padding: 40px 60px;
-            text-align: center;
             border-top: 1px solid var(--border);
+            padding: 48px 0;
+            text-align: center;
         }
 
-        .intro-footer p {
-            font-size: 16px;
+        footer p {
             color: var(--text-secondary);
-            margin: 0;
+            font-size: 14px;
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .intro-content {
-                padding: 60px 40px;
-            }
-
-            .intro-header {
-                padding: 60px 40px;
-            }
-
-            .features-grid {
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 24px;
-            }
-        }
-
         @media (max-width: 768px) {
-            .intro-container {
-                border-radius: 16px;
+            .hero h1 {
+                font-size: 36px;
             }
 
-            .intro-header {
-                padding: 48px 32px;
-            }
-
-            .intro-title {
-                font-size: 40px;
-            }
-
-            .intro-subtitle {
+            .hero p {
                 font-size: 18px;
             }
 
-            .intro-content {
-                padding: 48px 32px;
-            }
-
-            .intro-section h2 {
+            .section-title {
                 font-size: 28px;
             }
 
             .features-grid {
                 grid-template-columns: 1fr;
-                gap: 20px;
+                gap: 24px;
             }
 
-            .intro-actions {
+            nav {
+                gap: 16px;
+            }
+
+            .header-content {
                 flex-direction: column;
+                gap: 16px;
             }
-
-            .intro-actions a {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .intro-footer {
-                padding: 32px 24px;
-            }
-        }
-
-        /* Smooth scroll */
-        html {
-            scroll-behavior: smooth;
         }
     </style>
 </head>
 <body>
-    <div class="intro-container">
-        <div class="intro-header">
-            <div class="drone-icon">🚁</div>
-            <h1 class="intro-title">Waypoint Planner</h1>
-            <p class="intro-subtitle">Professional DJI Drone Flight Planning Software</p>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="index.html" class="logo">Waypoint Planner</a>
+                <nav>
+                    <a href="guide.html">Documentation</a>
+                    <a href="https://drive.google.com/file/d/1_aGaxvDa-oAo_Ppw9Etj45DjMFphlIWS/view?usp=drive_link" target="_blank" class="btn-download">Download</a>
+                </nav>
+            </div>
         </div>
+    </header>
 
-        <div class="intro-content">
-            <div class="intro-section">
-                <h2>Enterprise-Grade Flight Planning</h2>
-                <p>
-                    Waypoint Planner is a professional desktop application engineered for creating precise, 
-                    automated flight plans for DJI drones. Built for photogrammetry professionals, surveyors, 
-                    inspection teams, and mapping specialists who demand accuracy and efficiency in their 
-                    aerial operations.
-                </p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">📍</div>
-                    <h3>Intelligent Waypoint System</h3>
-                    <p>Create waypoints through intuitive map interaction or automated path generation from polygons, rectangles, and circular areas with precision controls.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Multi-Platform Support</h3>
-                    <p>Comprehensive support for DJI Mini 5 Pro, Mavic 4 Pro, Mini 4 Pro, Air 3/3S, Mavic 3 series, and additional models with optimized flight parameters.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🗺️</div>
-                    <h3>Advanced Mapping Interface</h3>
-                    <p>Professional-grade map visualization with multiple style options including satellite imagery, terrain mapping, and optimized dark mode for extended use.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📸</div>
-                    <h3>Photogrammetry Optimization</h3>
-                    <p>Configure image overlap ratios, path spacing algorithms, and altitude management for professional-grade 3D reconstruction and mapping projects.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Advanced Mission Control</h3>
-                    <p>Dynamic altitude adjustment, waypoint action sequencing, intelligent mission splitting, and seamless KMZ export for DJI flight applications.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">💾</div>
-                    <h3>Universal File Compatibility</h3>
-                    <p>Export to JSON, KMZ for DJI Fly/Pilot integration, and import from KML, WGS84, and standard coordinate formats for maximum workflow flexibility.</p>
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>Waypoint Planner</h1>
+                <p>Professional desktop application for creating precise, automated flight plans for DJI drones. Built for photogrammetry professionals, surveyors, inspection teams, and mapping specialists.</p>
+                <div class="hero-actions">
+                    <a href="guide.html" class="btn btn-primary">View Documentation</a>
+                    <a href="https://drive.google.com/file/d/1_aGaxvDa-oAo_Ppw9Etj45DjMFphlIWS/view?usp=drive_link" target="_blank" class="btn btn-secondary">Download Application</a>
                 </div>
             </div>
+        </section>
 
-            <div class="intro-section">
-                <h2>Designed for Professional Applications</h2>
+        <section>
+            <div class="container">
+                <h2 class="section-title">Key Features</h2>
+                <p class="section-subtitle">Comprehensive flight planning tools designed for professional drone operations</p>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>Intelligent Waypoint System</h3>
+                        <p>Create waypoints through intuitive map interaction or automated path generation from polygons, rectangles, and circular areas with precision controls.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Multi-Platform Support</h3>
+                        <p>Comprehensive support for DJI Mini 5 Pro, Mavic 4 Pro, Mini 4 Pro, Air 3/3S, Mavic 3 series, and additional models with optimized flight parameters.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Advanced Mapping Interface</h3>
+                        <p>Professional-grade map visualization with multiple style options including satellite imagery, terrain mapping, and optimized dark mode for extended use.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Photogrammetry Optimization</h3>
+                        <p>Configure image overlap ratios, path spacing algorithms, and altitude management for professional-grade 3D reconstruction and mapping projects.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Advanced Mission Control</h3>
+                        <p>Dynamic altitude adjustment, waypoint action sequencing, intelligent mission splitting, and seamless KMZ export for DJI flight applications.</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Universal File Compatibility</h3>
+                        <p>Export to JSON, KMZ for DJI Fly/Pilot integration, and import from KML, WGS84, and standard coordinate formats for maximum workflow flexibility.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section style="background: var(--bg-gray);">
+            <div class="container">
+                <h2 class="section-title">Professional Applications</h2>
+                <p class="section-subtitle">Designed for enterprise-grade drone operations across multiple industries</p>
+                
                 <div class="use-cases">
-                    <span class="use-case">3D Modeling & Reconstruction</span>
-                    <span class="use-case">Topographic Mapping</span>
-                    <span class="use-case">Infrastructure Inspection</span>
-                    <span class="use-case">Photogrammetry</span>
-                    <span class="use-case">Terrain Analysis</span>
-                    <span class="use-case">Aerial Surveying</span>
-                    <span class="use-case">Construction Monitoring</span>
-                    <span class="use-case">Agricultural Mapping</span>
+                    <span class="use-case-tag">3D Modeling & Reconstruction</span>
+                    <span class="use-case-tag">Topographic Mapping</span>
+                    <span class="use-case-tag">Infrastructure Inspection</span>
+                    <span class="use-case-tag">Photogrammetry</span>
+                    <span class="use-case-tag">Terrain Analysis</span>
+                    <span class="use-case-tag">Aerial Surveying</span>
+                    <span class="use-case-tag">Construction Monitoring</span>
+                    <span class="use-case-tag">Agricultural Mapping</span>
                 </div>
             </div>
-        </div>
+        </section>
+    </main>
 
-        <div class="intro-actions">
-            <a href="guide.html" class="btn-primary">
-                <span>📖</span>
-                <span>View Documentation</span>
-            </a>
-            <a href="https://github.com/kpistolas/Waypoint-PlannerWeb/releases" target="_blank" class="btn-download">
-                <span>⬇️</span>
-                <span>Download Application</span>
-            </a>
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Waypoint Planner. All rights reserved.</p>
         </div>
-
-        <div class="intro-footer">
-            <p>Ready to elevate your drone operations? Download the application and begin planning professional-grade missions today.</p>
-        </div>
-    </div>
+    </footer>
 </body>
 </html>
