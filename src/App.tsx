@@ -21,8 +21,6 @@ const AppContent: React.FC = () => {
 }
 
 function App() {
-  console.log('App component rendering...')
-  
   return (
     <ErrorBoundary>
       <Provider>

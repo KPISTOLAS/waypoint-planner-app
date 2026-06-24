@@ -1,13 +1,20 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAtom, useSetAtom } from 'jotai'
-import { currentFlightPlanAtom, waypointsAtom, flightSettingsAtom, droneModelAtom } from '../store/flightPlanStore'
+import {
+  currentFlightPlanAtom,
+  droneModelAtom,
+  flightSettingsAtom,
+  normalizeFlightPlan,
+  selectedWaypointAtom,
+  waypointsAtom,
+} from '../store/flightPlanStore'
 import { addToastAtom } from '../store/toastStore'
 import { FlightPlan } from '../types'
 import { exportToKMZ, importFromKMZ, parseKMLPolygon, parseWGS84, generateWaypointsFromPolygonCoords } from '../utils/kmzHandler'
 import { splitMission, getRecommendedSplit } from '../utils/missionSplitter'
 import { calculateFlightPath } from '../utils/flightPathCalculator'
 import { estimateBatteryUsage, calculateMaxSafeDistance } from '../utils/batteryCalculator'
-import { exportToCSV, exportToDJIFlightHub, exportToLitchi, generatePDFReport } from '../utils/exportFormats'
+import { exportToCSV, exportToLitchi, generatePDFReport } from '../utils/exportFormats'
 import { initAutoSave, stopAutoSave } from '../utils/autoSave'
 import JSZip from 'jszip'
 import { Save, FolderOpen, Download, Upload, Trash2, Scissors, HelpCircle, FileText, FileSpreadsheet, FileJson, Battery, Clock, AlertTriangle } from 'lucide-react'
@@ -16,8 +23,9 @@ import './Toolbar.css'
 const Toolbar: React.FC = () => {
   const [flightPlan, setFlightPlan] = useAtom(currentFlightPlanAtom)
   const [waypoints, setWaypoints] = useAtom(waypointsAtom)
-  const [settings] = useAtom(flightSettingsAtom)
-  const [droneModel] = useAtom(droneModelAtom)
+  const [settings, setSettings] = useAtom(flightSettingsAtom)
+  const [droneModel, setDroneModel] = useAtom(droneModelAtom)
+  const [, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
   const [showSplitDialog, setShowSplitDialog] = useState(false)
   const [waypointsPerMission, setWaypointsPerMission] = useState(50)
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -56,19 +64,20 @@ const Toolbar: React.FC = () => {
       return
     }
     
-    const planToSave = {
+    const updatedAt = new Date()
+    const planToSave: FlightPlan = {
       ...flightPlan,
+      droneModel,
       waypoints,
       settings,
-      updatedAt: new Date(),
+      updatedAt,
     }
     
     if (window.electronAPI) {
       try {
         // Try to update existing project first
         await window.electronAPI.updateProject(flightPlan.name, planToSave)
-        setFlightPlan({ ...planToSave, updatedAt: new Date() })
-        console.log('Project saved successfully')
+        setFlightPlan(planToSave)
         // Show success message
         addToast(`Project "${flightPlan.name}" saved successfully!`, 'success')
       } catch (error: any) {
@@ -76,8 +85,7 @@ const Toolbar: React.FC = () => {
         // If update fails, try to create new project
         try {
           await window.electronAPI.createProject(flightPlan.name, planToSave)
-          setFlightPlan({ ...planToSave, updatedAt: new Date() })
-          console.log('Project created successfully')
+          setFlightPlan(planToSave)
           addToast(`Project "${flightPlan.name}" created successfully!`, 'success')
         } catch (createError: any) {
           console.error('Failed to save project:', createError)
@@ -97,7 +105,7 @@ const Toolbar: React.FC = () => {
       URL.revokeObjectURL(url)
       addToast(`Project "${flightPlan.name}" downloaded!`, 'success')
     }
-  }, [flightPlan, waypoints, settings, setFlightPlan, addToast])
+  }, [flightPlan, waypoints, settings, droneModel, setFlightPlan, addToast])
 
   // Keyboard shortcut: Ctrl+S to save
   React.useEffect(() => {
@@ -227,7 +235,7 @@ const Toolbar: React.FC = () => {
             throw new Error('File content is empty')
           }
           
-          const plan = JSON.parse(result.content) as FlightPlan
+          const plan = normalizeFlightPlan(JSON.parse(result.content) as FlightPlan)
           
           // Validate the plan structure
           if (!plan.waypoints || !Array.isArray(plan.waypoints)) {
@@ -236,6 +244,8 @@ const Toolbar: React.FC = () => {
           
           setFlightPlan(plan)
           setWaypoints(plan.waypoints || [])
+          setSettings(plan.settings)
+          setDroneModel(plan.droneModel)
           
           addToast(`Successfully loaded flight plan "${plan.name}" with ${plan.waypoints.length} waypoints.`, 'success')
         } catch (error) {
@@ -253,11 +263,11 @@ const Toolbar: React.FC = () => {
 
   // Calculate flight statistics
   const flightStats = React.useMemo(() => {
-    if (waypoints.length < 2) {
+    if (!showFlightStats || waypoints.length < 2) {
       return null
     }
     const path = calculateFlightPath(waypoints, settings)
-    const battery = estimateBatteryUsage(waypoints, settings, droneModel)
+    const battery = estimateBatteryUsage(waypoints, settings, droneModel, path)
     const maxDistance = calculateMaxSafeDistance(settings, droneModel)
     
     return {
@@ -266,7 +276,7 @@ const Toolbar: React.FC = () => {
       maxDistance,
       warnings: [] as string[],
     }
-  }, [waypoints, settings, droneModel])
+  }, [showFlightStats, waypoints, settings, droneModel])
 
   // Warnings are calculated in flightStats and displayed in the UI
 
@@ -286,9 +296,15 @@ const Toolbar: React.FC = () => {
   const handleExportPDF = () => {
     if (!flightPlan || waypoints.length === 0) return
     
-    const battery = estimateBatteryUsage(waypoints, settings, droneModel)
     const path = calculateFlightPath(waypoints, settings)
-    const html = generatePDFReport(flightPlan, battery, path)
+    const battery = estimateBatteryUsage(waypoints, settings, droneModel, path)
+    const activePlan = normalizeFlightPlan({
+      ...flightPlan,
+      droneModel,
+      waypoints,
+      settings,
+    })
+    const html = generatePDFReport(activePlan, battery, path)
     
     // Open in new window for printing/saving as PDF
     const printWindow = window.open('', '_blank')
@@ -303,18 +319,30 @@ const Toolbar: React.FC = () => {
     }
   }
 
-  const handleExportDJIFlightHub = () => {
+  const handleExportDJIWPML = async () => {
     if (!flightPlan || waypoints.length === 0) return
-    
-    const data = exportToDJIFlightHub(flightPlan)
-    const json = JSON.stringify(data, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${flightPlan.name}_flightHub.json`
-    a.click()
-    URL.revokeObjectURL(url)
+
+    try {
+      const activePlan = normalizeFlightPlan({
+        ...flightPlan,
+        droneModel,
+        waypoints,
+        settings,
+        updatedAt: new Date(),
+      })
+      const kmzBlob = await exportToKMZ(activePlan)
+      const url = URL.createObjectURL(kmzBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${flightPlan.name}_dji_wpml.kmz`
+      a.click()
+      URL.revokeObjectURL(url)
+      addToast(`DJI WPML KMZ "${flightPlan.name}_dji_wpml.kmz" exported successfully!`, 'success')
+    } catch (error) {
+      console.error('Failed to export DJI WPML:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to export DJI WPML: ${errorMessage}`, 'error')
+    }
   }
 
   const handleExportLitchi = () => {
@@ -351,6 +379,7 @@ const Toolbar: React.FC = () => {
     try {
       const kmzBlob = await exportToKMZ({
         ...planToUse,
+        droneModel,
         waypoints,
         settings,
         updatedAt: new Date(),
@@ -366,11 +395,11 @@ const Toolbar: React.FC = () => {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
       
-      console.log('KMZ file exported successfully:', `${planToUse.name}.kmz`)
       addToast(`KMZ file "${planToUse.name}.kmz" exported successfully!`, 'success')
     } catch (error) {
       console.error('Failed to export KMZ:', error)
-      addToast('Failed to export KMZ file. Please check the console for details.', 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to export KMZ file: ${errorMessage}`, 'error')
     }
   }
 
@@ -476,6 +505,16 @@ const Toolbar: React.FC = () => {
   const handleClear = () => {
     if (confirm('Are you sure you want to clear all waypoints?')) {
       setWaypoints([])
+      setSelectedWaypoint(null)
+      if (flightPlan) {
+        setFlightPlan({
+          ...flightPlan,
+          droneModel,
+          waypoints: [],
+          settings,
+          updatedAt: new Date(),
+        })
+      }
     }
   }
 
@@ -522,6 +561,7 @@ const Toolbar: React.FC = () => {
     const result = splitMission(
       {
         ...flightPlan,
+        droneModel,
         waypoints,
         settings,
         updatedAt: new Date(),
@@ -533,17 +573,22 @@ const Toolbar: React.FC = () => {
       // Create a zip file containing all split missions
       const zip = new JSZip()
       
-      // Export all split missions as KMZ files and add them to the zip
-      for (const mission of result.missions) {
-        try {
-          const kmzBlob = await exportToKMZ(mission)
-          // Sanitize filename by removing invalid characters
-          const sanitizedName = mission.name.replace(/[<>:"/\\|?*]/g, '_')
-          zip.file(`${sanitizedName}.kmz`, kmzBlob)
-        } catch (error) {
-          console.error(`Failed to export mission "${mission.name}":`, error)
-          throw error
-        }
+      const missionFiles = await Promise.all(
+        result.missions.map(async (mission) => {
+          try {
+            const kmzBlob = await exportToKMZ(mission)
+            // Sanitize filename by removing invalid characters
+            const sanitizedName = mission.name.replace(/[<>:"/\\|?*]/g, '_')
+            return { name: sanitizedName, blob: kmzBlob }
+          } catch (error) {
+            console.error(`Failed to export mission "${mission.name}":`, error)
+            throw error
+          }
+        })
+      )
+
+      for (const missionFile of missionFiles) {
+        zip.file(`${missionFile.name}.kmz`, missionFile.blob)
       }
 
       // Generate the zip file
@@ -564,7 +609,8 @@ const Toolbar: React.FC = () => {
       setShowSplitDialog(false)
     } catch (error) {
       console.error('Failed to create zip file:', error)
-      addToast('Failed to create zip file. Please check the console for details.', 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to create split mission package: ${errorMessage}`, 'error')
     }
   }
 
@@ -615,7 +661,7 @@ const Toolbar: React.FC = () => {
             <div className="export-menu" onClick={(e) => e.stopPropagation()}>
               <button className="export-menu-item" onClick={() => { handleExportKMZ(); setShowExportMenu(false); }}>
                 <Download size={16} />
-                <span>Export KMZ</span>
+                <span>Export DJI KMZ</span>
               </button>
               <button className="export-menu-item" onClick={() => { handleExportCSV(); setShowExportMenu(false); }}>
                 <FileSpreadsheet size={16} />
@@ -625,9 +671,9 @@ const Toolbar: React.FC = () => {
                 <FileText size={16} />
                 <span>Export PDF Report</span>
               </button>
-              <button className="export-menu-item" onClick={() => { handleExportDJIFlightHub(); setShowExportMenu(false); }}>
+              <button className="export-menu-item" onClick={() => { handleExportDJIWPML(); setShowExportMenu(false); }}>
                 <FileJson size={16} />
-                <span>Export DJI FlightHub</span>
+                <span>Export DJI WPML</span>
               </button>
               <button className="export-menu-item" onClick={() => { handleExportLitchi(); setShowExportMenu(false); }}>
                 <FileSpreadsheet size={16} />
@@ -636,7 +682,7 @@ const Toolbar: React.FC = () => {
             </div>
           )}
         </div>
-        {flightStats && (
+        {waypoints.length >= 2 && (
           <div style={{ position: 'relative', zIndex: 10000 }} ref={statsMenuRef}>
             <button
               className="toolbar-btn"
@@ -650,7 +696,7 @@ const Toolbar: React.FC = () => {
               <Battery size={18} />
               <span>Stats</span>
             </button>
-            {showFlightStats && (
+            {showFlightStats && flightStats && (
               <div className="flight-stats-menu" onClick={(e) => e.stopPropagation()}>
                 <div className="stats-item">
                   <Clock size={16} />

@@ -6,8 +6,6 @@ import { waypointsAtom } from '../store/flightPlanStore'
 const MapViewSimple: React.FC = () => {
   const [waypoints] = useAtom(waypointsAtom)
   
-  console.log('MapViewSimple rendering, waypoints:', waypoints.length)
-  
   return (
     <div className="map-view" style={{ 
       height: '100%', 

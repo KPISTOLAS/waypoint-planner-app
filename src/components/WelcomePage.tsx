@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useAtom } from 'jotai'
-import { currentFlightPlanAtom, waypointsAtom, flightSettingsAtom, droneModelAtom } from '../store/flightPlanStore'
+import {
+  currentFlightPlanAtom,
+  droneModelAtom,
+  flightSettingsAtom,
+  normalizeFlightPlan,
+  waypointsAtom,
+} from '../store/flightPlanStore'
 import { FlightPlan } from '../types'
 import { FolderPlus, FolderOpen, HelpCircle, X, Calendar, FileText } from 'lucide-react'
 import './WelcomePage.css'
@@ -23,8 +29,8 @@ const WelcomePage: React.FC<{ onProjectLoaded: () => void }> = ({ onProjectLoade
   
   const [, setFlightPlan] = useAtom(currentFlightPlanAtom)
   const [, setWaypoints] = useAtom(waypointsAtom)
-  const [settings] = useAtom(flightSettingsAtom)
-  const [droneModel] = useAtom(droneModelAtom)
+  const [settings, setSettings] = useAtom(flightSettingsAtom)
+  const [droneModel, setDroneModel] = useAtom(droneModelAtom)
 
   useEffect(() => {
     loadProjects()
@@ -91,10 +97,12 @@ const WelcomePage: React.FC<{ onProjectLoaded: () => void }> = ({ onProjectLoade
         throw new Error('Electron API not available')
       }
 
-      const flightPlan = await window.electronAPI.loadProject(projectPath)
+      const flightPlan = normalizeFlightPlan(await window.electronAPI.loadProject(projectPath))
       
       setFlightPlan(flightPlan)
       setWaypoints(flightPlan.waypoints || [])
+      setSettings(flightPlan.settings)
+      setDroneModel(flightPlan.droneModel)
       setError(null)
       onProjectLoaded()
     } catch (error: any) {

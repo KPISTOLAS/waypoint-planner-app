@@ -1,5 +1,5 @@
 import { DJIModel, Waypoint, FlightSettings } from '../types'
-import { calculateFlightPath } from './flightPathCalculator'
+import { CalculatedPath, calculateFlightPath } from './flightPathCalculator'
 
 // Battery specifications for DJI drones (in mAh and flight time in minutes)
 export const DRONE_BATTERY_SPECS: Record<DJIModel, {
@@ -9,6 +9,13 @@ export const DRONE_BATTERY_SPECS: Record<DJIModel, {
   hoverTime: number // minutes
   maxSpeed: number // m/s
 }> = {
+  'Mavic 3 Enterprise': { capacity: 5000, voltage: 15.4, maxFlightTime: 45, hoverTime: 38, maxSpeed: 21 },
+  'Mavic 3 Thermal': { capacity: 5000, voltage: 15.4, maxFlightTime: 45, hoverTime: 38, maxSpeed: 21 },
+  'Mavic 3 Multispectral': { capacity: 5000, voltage: 15.4, maxFlightTime: 43, hoverTime: 36, maxSpeed: 21 },
+  'Matrice 30': { capacity: 5880, voltage: 26.1, maxFlightTime: 41, hoverTime: 36, maxSpeed: 23 },
+  'Matrice 30T': { capacity: 5880, voltage: 26.1, maxFlightTime: 41, hoverTime: 36, maxSpeed: 23 },
+  'Matrice 3D': { capacity: 7811, voltage: 14.76, maxFlightTime: 50, hoverTime: 44, maxSpeed: 21 },
+  'Matrice 3TD': { capacity: 7811, voltage: 14.76, maxFlightTime: 50, hoverTime: 44, maxSpeed: 21 },
   'Mini 5 Pro': { capacity: 3850, voltage: 7.7, maxFlightTime: 47, hoverTime: 40, maxSpeed: 16 },
   'Mavic 4 Pro': { capacity: 5870, voltage: 15.4, maxFlightTime: 45, hoverTime: 38, maxSpeed: 22 },
   'Mini 4 Pro': { capacity: 2451, voltage: 7.38, maxFlightTime: 34, hoverTime: 30, maxSpeed: 16 },
@@ -33,10 +40,11 @@ export interface BatteryEstimate {
 export const estimateBatteryUsage = (
   waypoints: Waypoint[],
   settings: FlightSettings,
-  droneModel: DJIModel
+  droneModel: DJIModel,
+  calculatedPath?: Pick<CalculatedPath, 'estimatedTime'>
 ): BatteryEstimate => {
   const specs = DRONE_BATTERY_SPECS[droneModel]
-  const { totalDistance, estimatedTime } = calculateFlightPath(waypoints, settings)
+  const estimatedTime = calculatedPath?.estimatedTime ?? calculateFlightPath(waypoints, settings).estimatedTime
   
   // Convert time to minutes
   const flightTimeMinutes = estimatedTime / 60

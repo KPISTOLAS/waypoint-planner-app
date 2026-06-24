@@ -9,7 +9,6 @@ import { ToastContainer } from './Toast'
 import './MainLayout.css'
 
 const MainLayout: React.FC = () => {
-  console.log('MainLayout rendering...')
   const [toasts] = useAtom(toastsAtom)
   const removeToast = useAtom(removeToastAtom)[1]
 

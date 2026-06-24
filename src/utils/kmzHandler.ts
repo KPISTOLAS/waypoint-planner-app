@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { Waypoint, FlightPlan, FlightSettings } from '../types'
+import { DJIModel, Waypoint, FlightPlan, FlightSettings, WaypointAction } from '../types'
 import L from 'leaflet'
 import { generateWaypointsFromArea } from './waypointGenerator'
 
@@ -9,91 +9,356 @@ export interface KMZData {
   description?: string
 }
 
+interface DJIWPMLProfile {
+  droneEnumValue: number
+  droneSubEnumValue: number
+  payloadEnumValue: number
+  payloadLensIndex: string
+}
+
+const DJI_WPML_NAMESPACE = 'http://www.dji.com/wpmz/1.0.2'
+
+const DJI_WPML_PROFILES: Partial<Record<DJIModel, DJIWPMLProfile>> = {
+  'Mavic 3 Enterprise': {
+    droneEnumValue: 77,
+    droneSubEnumValue: 0,
+    payloadEnumValue: 66,
+    payloadLensIndex: 'wide',
+  },
+  'Mavic 3 Thermal': {
+    droneEnumValue: 77,
+    droneSubEnumValue: 1,
+    payloadEnumValue: 67,
+    payloadLensIndex: 'wide,ir',
+  },
+  'Mavic 3 Multispectral': {
+    droneEnumValue: 77,
+    droneSubEnumValue: 2,
+    payloadEnumValue: 68,
+    payloadLensIndex: 'wide',
+  },
+  'Matrice 30': {
+    droneEnumValue: 67,
+    droneSubEnumValue: 0,
+    payloadEnumValue: 52,
+    payloadLensIndex: 'wide',
+  },
+  'Matrice 30T': {
+    droneEnumValue: 67,
+    droneSubEnumValue: 1,
+    payloadEnumValue: 53,
+    payloadLensIndex: 'wide,ir',
+  },
+  'Matrice 3D': {
+    droneEnumValue: 91,
+    droneSubEnumValue: 0,
+    payloadEnumValue: 80,
+    payloadLensIndex: 'wide',
+  },
+  'Matrice 3TD': {
+    droneEnumValue: 91,
+    droneSubEnumValue: 1,
+    payloadEnumValue: 81,
+    payloadLensIndex: 'wide,ir',
+  },
+}
+
+const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value))
+
+const escapeXml = (str: string): string => {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+const formatNumber = (value: number, digits = 6): string => {
+  return Number.isFinite(value) ? Number(value.toFixed(digits)).toString() : '0'
+}
+
+const getWPMLProfile = (droneModel: DJIModel): DJIWPMLProfile => {
+  const profile = DJI_WPML_PROFILES[droneModel]
+  if (!profile) {
+    throw new Error(
+      `DJI WPML export supports Mavic 3 Enterprise/Thermal/Multispectral, Matrice 30/30T, and Matrice 3D/3TD. "${droneModel}" does not have a published DJI WPML SDK identifier.`
+    )
+  }
+  return profile
+}
+
 export const exportToKMZ = async (flightPlan: FlightPlan): Promise<Blob> => {
   const zip = new JSZip()
-  
-  // Create KML content
-  const kmlContent = generateKML(flightPlan)
-  
-  // Add KML to zip
-  zip.file('doc.kml', kmlContent)
+
+  validateFlightPlanForWPML(flightPlan)
+  const profile = getWPMLProfile(flightPlan.droneModel)
+
+  zip.file('template.kml', generateTemplateKML(flightPlan, profile))
+  zip.file('waylines.wpml', generateWaylinesWPML(flightPlan, profile))
   
   // Generate and return KMZ blob
   return await zip.generateAsync({ type: 'blob' })
 }
 
-const generateKML = (flightPlan: FlightPlan): string => {
+const validateFlightPlanForWPML = (flightPlan: FlightPlan): void => {
   const waypoints = flightPlan.waypoints
   
   // Validate waypoints
   if (!waypoints || waypoints.length === 0) {
     throw new Error('No waypoints to export')
   }
-  
-  // Escape XML special characters
-  const escapeXml = (str: string): string => {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;')
-  }
-  
-  const placemarks = waypoints.map((wp, index) => {
-    // Validate waypoint data
-    if (typeof wp.latitude !== 'number' || typeof wp.longitude !== 'number') {
+
+  waypoints.forEach((wp, index) => {
+    if (
+      typeof wp.latitude !== 'number' ||
+      typeof wp.longitude !== 'number' ||
+      !Number.isFinite(wp.latitude) ||
+      !Number.isFinite(wp.longitude)
+    ) {
       throw new Error(`Invalid coordinates in waypoint ${index + 1}`)
     }
-    
-    const actions = wp.actions?.map(a => `<action>${escapeXml(a.type)}</action>`).join('') || ''
-    const altitude = typeof wp.altitude === 'number' ? wp.altitude : 0
-    const speed = wp.speed || flightPlan.settings?.speed || 0
-    const gimbal = wp.gimbalPitch || flightPlan.settings?.gimbalAngle || 0
-    
-    return `
-    <Placemark>
-      <name>Waypoint ${index + 1}</name>
-      <description>
-        Altitude: ${altitude}m
-        Speed: ${speed}m/s
-        Gimbal: ${gimbal}°
-        ${actions ? `<br/>Actions: ${actions}` : ''}
-      </description>
+  })
+}
+
+const generateMissionConfig = (flightPlan: FlightPlan, profile: DJIWPMLProfile): string => {
+  const speed = clamp(flightPlan.settings.speed || 5, 1, 15)
+  const takeOffSecurityHeight = clamp(Math.max(20, flightPlan.settings.altitude || 20), 1.2, 1500)
+
+  return `  <wpml:missionConfig>
+    <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
+    <wpml:finishAction>goHome</wpml:finishAction>
+    <wpml:exitOnRCLost>goContinue</wpml:exitOnRCLost>
+    <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
+    <wpml:takeOffSecurityHeight>${formatNumber(takeOffSecurityHeight, 2)}</wpml:takeOffSecurityHeight>
+    <wpml:globalTransitionalSpeed>${formatNumber(speed, 2)}</wpml:globalTransitionalSpeed>
+    <wpml:droneInfo>
+      <wpml:droneEnumValue>${profile.droneEnumValue}</wpml:droneEnumValue>
+      <wpml:droneSubEnumValue>${profile.droneSubEnumValue}</wpml:droneSubEnumValue>
+    </wpml:droneInfo>
+    <wpml:payloadInfo>
+      <wpml:payloadEnumValue>${profile.payloadEnumValue}</wpml:payloadEnumValue>
+      <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+    </wpml:payloadInfo>
+  </wpml:missionConfig>`
+}
+
+const generateCoordinateSysParam = (flightPlan: FlightPlan): string => {
+  return `    <wpml:waylineCoordinateSysParam>
+      <wpml:coordinateMode>WGS84</wpml:coordinateMode>
+      <wpml:heightMode>EGM96</wpml:heightMode>
+      <wpml:globalShootHeight>${formatNumber(flightPlan.settings.altitude, 2)}</wpml:globalShootHeight>
+      <wpml:positioningType>GPS</wpml:positioningType>
+      <wpml:surfaceFollowModeEnable>${flightPlan.settings.dynamicAltitude ? 1 : 0}</wpml:surfaceFollowModeEnable>
+      <wpml:surfaceRelativeHeight>${formatNumber(flightPlan.settings.altitude, 2)}</wpml:surfaceRelativeHeight>
+    </wpml:waylineCoordinateSysParam>`
+}
+
+const generateWaypointHeadingParam = (heading?: number): string => {
+  if (typeof heading === 'number' && Number.isFinite(heading)) {
+    const normalizedHeading = ((heading + 180) % 360) - 180
+    return `        <wpml:waypointHeadingParam>
+          <wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>
+          <wpml:waypointHeadingAngle>${formatNumber(normalizedHeading, 2)}</wpml:waypointHeadingAngle>
+          <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
+        </wpml:waypointHeadingParam>`
+  }
+
+  return `        <wpml:waypointHeadingParam>
+          <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
+        </wpml:waypointHeadingParam>`
+}
+
+const generateWaypointTurnParam = (): string => {
+  return `        <wpml:waypointTurnParam>
+          <wpml:waypointTurnMode>toPointAndStopWithDiscontinuityCurvature</wpml:waypointTurnMode>
+          <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
+        </wpml:waypointTurnParam>`
+}
+
+const generateActionParam = (action: WaypointAction, waypointIndex: number, actionIndex: number, profile: DJIWPMLProfile): string => {
+  const payloadPosition = '<wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>'
+  const payloadLens = `<wpml:payloadLensIndex>${escapeXml(profile.payloadLensIndex)}</wpml:payloadLensIndex>
+            <wpml:useGlobalPayloadLensIndex>0</wpml:useGlobalPayloadLensIndex>`
+
+  switch (action.type) {
+    case 'takePhoto':
+      return `          <wpml:actionActuatorFunc>takePhoto</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:fileSuffix>wp${waypointIndex + 1}_photo${actionIndex + 1}</wpml:fileSuffix>
+            ${payloadPosition}
+            ${payloadLens}
+          </wpml:actionActuatorFuncParam>`
+    case 'startRecord':
+      return `          <wpml:actionActuatorFunc>startRecord</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:fileSuffix>wp${waypointIndex + 1}_video${actionIndex + 1}</wpml:fileSuffix>
+            ${payloadPosition}
+            ${payloadLens}
+          </wpml:actionActuatorFuncParam>`
+    case 'stopRecord':
+      return `          <wpml:actionActuatorFunc>stopRecord</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            ${payloadPosition}
+            ${payloadLens}
+          </wpml:actionActuatorFuncParam>`
+    case 'rotateGimbal': {
+      const pitch = typeof action.params?.angle === 'number' ? action.params.angle : 0
+      return `          <wpml:actionActuatorFunc>gimbalRotate</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:gimbalHeadingYawBase>north</wpml:gimbalHeadingYawBase>
+            <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>
+            <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>
+            <wpml:gimbalPitchRotateAngle>${formatNumber(pitch, 2)}</wpml:gimbalPitchRotateAngle>
+            <wpml:gimbalRollRotateEnable>0</wpml:gimbalRollRotateEnable>
+            <wpml:gimbalRollRotateAngle>0</wpml:gimbalRollRotateAngle>
+            <wpml:gimbalYawRotateEnable>0</wpml:gimbalYawRotateEnable>
+            <wpml:gimbalYawRotateAngle>0</wpml:gimbalYawRotateAngle>
+            <wpml:gimbalRotateTimeEnable>0</wpml:gimbalRotateTimeEnable>
+            <wpml:gimbalRotateTime>0</wpml:gimbalRotateTime>
+            ${payloadPosition}
+          </wpml:actionActuatorFuncParam>`
+    }
+    case 'hover': {
+      const hoverTime = typeof action.params?.duration === 'number' ? Math.max(1, action.params.duration) : 5
+      return `          <wpml:actionActuatorFunc>hover</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:hoverTime>${formatNumber(hoverTime, 2)}</wpml:hoverTime>
+          </wpml:actionActuatorFuncParam>`
+    }
+    default:
+      return ''
+  }
+}
+
+const generateActionGroup = (
+  waypoint: Waypoint,
+  waypointIndex: number,
+  profile: DJIWPMLProfile
+): string => {
+  const actions = waypoint.actions || []
+  if (actions.length === 0) return ''
+
+  const wpmlActions = actions
+    .map((action, actionIndex) => {
+      const param = generateActionParam(action, waypointIndex, actionIndex, profile)
+      if (!param) return ''
+      return `        <wpml:action>
+          <wpml:actionId>${actionIndex}</wpml:actionId>
+${param}
+        </wpml:action>`
+    })
+    .filter(Boolean)
+
+  if (wpmlActions.length === 0) return ''
+
+  return `
+        <wpml:actionGroup>
+          <wpml:actionGroupId>${waypointIndex}</wpml:actionGroupId>
+          <wpml:actionGroupStartIndex>${waypointIndex}</wpml:actionGroupStartIndex>
+          <wpml:actionGroupEndIndex>${waypointIndex}</wpml:actionGroupEndIndex>
+          <wpml:actionGroupMode>sequence</wpml:actionGroupMode>
+          <wpml:actionTrigger>
+            <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
+          </wpml:actionTrigger>
+${wpmlActions.join('\n')}
+        </wpml:actionGroup>`
+}
+
+const generateTemplatePlacemark = (wp: Waypoint, index: number, flightPlan: FlightPlan, profile: DJIWPMLProfile): string => {
+  const altitude = typeof wp.altitude === 'number' ? wp.altitude : flightPlan.settings.altitude
+  const gimbal = wp.gimbalPitch ?? flightPlan.settings.gimbalAngle
+
+  return `    <Placemark>
       <Point>
-        <coordinates>${wp.longitude},${wp.latitude},${altitude}</coordinates>
+        <coordinates>${formatNumber(wp.longitude, 8)},${formatNumber(wp.latitude, 8)}</coordinates>
       </Point>
-    </Placemark>
-    `
-  }).join('')
-  
-  const pathCoordinates = waypoints
-    .map(wp => `${wp.longitude},${wp.latitude},${typeof wp.altitude === 'number' ? wp.altitude : 0}`)
-    .join(' ')
-  
-  const planName = escapeXml(flightPlan.name || 'Flight Plan')
-  const droneModel = escapeXml(flightPlan.droneModel || 'Unknown')
-  
+      <wpml:index>${index}</wpml:index>
+      <wpml:ellipsoidHeight>${formatNumber(altitude, 2)}</wpml:ellipsoidHeight>
+      <wpml:height>${formatNumber(altitude, 2)}</wpml:height>
+      <wpml:useGlobalHeight>0</wpml:useGlobalHeight>
+      <wpml:useGlobalSpeed>${wp.speed === undefined ? 1 : 0}</wpml:useGlobalSpeed>
+      <wpml:useGlobalHeadingParam>${wp.heading === undefined ? 1 : 0}</wpml:useGlobalHeadingParam>
+      <wpml:useGlobalTurnParam>1</wpml:useGlobalTurnParam>
+      <wpml:gimbalPitchAngle>${formatNumber(gimbal, 2)}</wpml:gimbalPitchAngle>${generateActionGroup(wp, index, profile)}
+    </Placemark>`
+}
+
+const generateWaylinePlacemark = (wp: Waypoint, index: number, flightPlan: FlightPlan, profile: DJIWPMLProfile): string => {
+  const altitude = typeof wp.altitude === 'number' ? wp.altitude : flightPlan.settings.altitude
+  const speed = clamp(wp.speed ?? flightPlan.settings.speed, 1, 15)
+  const gimbal = wp.gimbalPitch ?? flightPlan.settings.gimbalAngle
+
+  return `      <Placemark>
+        <Point>
+          <coordinates>${formatNumber(wp.longitude, 8)},${formatNumber(wp.latitude, 8)}</coordinates>
+        </Point>
+        <wpml:index>${index}</wpml:index>
+        <wpml:executeHeight>${formatNumber(altitude, 2)}</wpml:executeHeight>
+        <wpml:waypointSpeed>${formatNumber(speed, 2)}</wpml:waypointSpeed>
+${generateWaypointHeadingParam(wp.heading)}
+${generateWaypointTurnParam()}
+        <wpml:gimbalPitchAngle>${formatNumber(gimbal, 2)}</wpml:gimbalPitchAngle>${generateActionGroup(wp, index, profile)}
+      </Placemark>`
+}
+
+const generateTemplateKML = (flightPlan: FlightPlan, profile: DJIWPMLProfile): string => {
+  const timestamp = flightPlan.updatedAt instanceof Date ? flightPlan.updatedAt.getTime() : Date.now()
+  const speed = clamp(flightPlan.settings.speed || 5, 1, 15)
+  const placemarks = flightPlan.waypoints
+    .map((wp, index) => generateTemplatePlacemark(wp, index, flightPlan, profile))
+    .join('\n')
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>${planName}</name>
-    <description>Flight plan for ${droneModel}</description>
-    ${placemarks}
-    <Placemark>
-      <name>Flight Path</name>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>${pathCoordinates}</coordinates>
-      </LineString>
-      <Style>
-        <LineStyle>
-          <color>ff0099ff</color>
-          <width>3</width>
-        </LineStyle>
-      </Style>
-    </Placemark>
-  </Document>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="${DJI_WPML_NAMESPACE}">
+<Document>
+  <name>${escapeXml(flightPlan.name || 'Flight Plan')}</name>
+  <wpml:author>Waypoint Planner</wpml:author>
+  <wpml:createTime>${timestamp}</wpml:createTime>
+  <wpml:updateTime>${timestamp}</wpml:updateTime>
+${generateMissionConfig(flightPlan, profile)}
+  <Folder>
+    <wpml:templateType>waypoint</wpml:templateType>
+    <wpml:templateId>0</wpml:templateId>
+${generateCoordinateSysParam(flightPlan)}
+    <wpml:autoFlightSpeed>${formatNumber(speed, 2)}</wpml:autoFlightSpeed>
+    <wpml:gimbalPitchMode>usePointSetting</wpml:gimbalPitchMode>
+    <wpml:globalWaypointHeadingParam>
+      <wpml:waypointHeadingMode>followWayline</wpml:waypointHeadingMode>
+    </wpml:globalWaypointHeadingParam>
+    <wpml:globalWaypointTurnMode>toPointAndStopWithDiscontinuityCurvature</wpml:globalWaypointTurnMode>
+    <wpml:globalUseStraightLine>${flightPlan.settings.straightenedPaths ? 1 : 0}</wpml:globalUseStraightLine>
+${placemarks}
+  </Folder>
+</Document>
+</kml>`
+}
+
+const generateWaylinesWPML = (flightPlan: FlightPlan, profile: DJIWPMLProfile): string => {
+  const timestamp = flightPlan.updatedAt instanceof Date ? flightPlan.updatedAt.getTime() : Date.now()
+  const speed = clamp(flightPlan.settings.speed || 5, 1, 15)
+  const placemarks = flightPlan.waypoints
+    .map((wp, index) => generateWaylinePlacemark(wp, index, flightPlan, profile))
+    .join('\n')
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="${DJI_WPML_NAMESPACE}">
+<Document>
+  <name>${escapeXml(flightPlan.name || 'Flight Plan')}</name>
+  <wpml:author>Waypoint Planner</wpml:author>
+  <wpml:createTime>${timestamp}</wpml:createTime>
+  <wpml:updateTime>${timestamp}</wpml:updateTime>
+${generateMissionConfig(flightPlan, profile)}
+  <Folder>
+    <wpml:templateId>0</wpml:templateId>
+    <wpml:executeHeightMode>WGS84</wpml:executeHeightMode>
+    <wpml:waylineId>0</wpml:waylineId>
+    <wpml:distance>0</wpml:distance>
+    <wpml:duration>0</wpml:duration>
+    <wpml:autoFlightSpeed>${formatNumber(speed, 2)}</wpml:autoFlightSpeed>
+${placemarks}
+  </Folder>
+</Document>
 </kml>`
 }
 
@@ -129,11 +394,13 @@ const parseKML = (kmlContent: string): KMZData => {
       throw new Error('No Document or Folder found in KML')
     }
     
-    const nameEl = document.querySelector('name')
-    const name = nameEl?.textContent || 'Imported Flight Plan'
+    const getDirectChildText = (parent: Element, tagName: string): string | undefined => {
+      return Array.from(parent.children).find((child) => child.tagName === tagName)?.textContent || undefined
+    }
+
+    const name = getDirectChildText(document, 'name') || 'Imported Flight Plan'
     
-    const descEl = document.querySelector('description')
-    const description = descEl?.textContent || ''
+    const description = getDirectChildText(document, 'description') || ''
     
     // Get all placemarks with Point elements
     const placemarks = Array.from(document.querySelectorAll('Placemark'))
@@ -148,16 +415,24 @@ const parseKML = (kmlContent: string): KMZData => {
           throw new Error(`No coordinates found in waypoint ${index + 1}`)
         }
         
-        const coords = coordsEl.textContent?.trim().split(',') || []
+        const coordinateText = coordsEl.textContent?.trim().split(/\s+/)[0] || ''
+        const coords = coordinateText.split(',')
         if (coords.length < 2) {
+          throw new Error(`Invalid coordinates in waypoint ${index + 1}`)
+        }
+
+        const longitude = parseFloat(coords[0])
+        const latitude = parseFloat(coords[1])
+        const altitude = coords[2] === undefined ? 50 : parseFloat(coords[2])
+        if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(altitude)) {
           throw new Error(`Invalid coordinates in waypoint ${index + 1}`)
         }
         
         return {
           id: `imported-${index}-${Date.now()}`,
-          longitude: parseFloat(coords[0]),
-          latitude: parseFloat(coords[1]),
-          altitude: parseFloat(coords[2]) || 50,
+          longitude,
+          latitude,
+          altitude,
           speed: undefined,
           gimbalPitch: undefined,
           heading: 0,

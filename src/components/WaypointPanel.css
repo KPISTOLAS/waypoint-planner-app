@@ -42,6 +42,10 @@
   min-height: 0;
 }
 
+.waypoint-list-spacer {
+  position: relative;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

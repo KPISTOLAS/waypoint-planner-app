@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from 'react-leaflet'
-import { useAtom } from 'jotai'
+import { useAtom, useSetAtom } from 'jotai'
 import { waypointsAtom, selectedWaypointAtom, flightSettingsAtom, mapCenterAtom, mapZoomAtom } from '../store/flightPlanStore'
 import { isDrawingAtom } from '../store/drawingStore'
 import { drawingModeAtom } from '../store/drawingModeStore'
@@ -70,9 +70,15 @@ const createWaypointIcon = (index: number, isSelected: boolean, heading: number 
   })
 }
 
+const polylinePathOptions: L.PathOptions = {
+  color: '#4a90e2',
+  weight: 3,
+  opacity: 0.7,
+}
+
 // Component to handle map clicks (only when not drawing)
 const MapClickHandler: React.FC = () => {
-  const [waypoints, setWaypoints] = useAtom(waypointsAtom)
+  const [, setWaypoints] = useAtom(waypointsAtom)
   const [settings] = useAtom(flightSettingsAtom)
   const [, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
   const [isDrawing] = useAtom(isDrawingAtom)
@@ -96,7 +102,7 @@ const MapClickHandler: React.FC = () => {
         actions: settings.autoTakePhoto ? [{ type: 'takePhoto' }] : [],
         dynamicAltitude: settings.dynamicAltitude,
       }
-      setWaypoints([...waypoints, newWaypoint])
+      setWaypoints((prevWaypoints) => [...prevWaypoints, newWaypoint])
       setSelectedWaypoint(newWaypoint.id)
     },
   })
@@ -108,23 +114,74 @@ const MapClickHandler: React.FC = () => {
 const MapViewSync: React.FC = () => {
   const [center] = useAtom(mapCenterAtom)
   const [zoom] = useAtom(mapZoomAtom)
-  const map = useMapEvents({})
+  const map = useMap()
+
+  const centersAreEqual = (a: [number, number], b: [number, number]) =>
+    Math.abs(a[0] - b[0]) < 0.0000001 && Math.abs(a[1] - b[1]) < 0.0000001
 
   useEffect(() => {
     if (center[0] !== 0 || center[1] !== 0) {
-      map.setView(center, zoom)
+      const currentCenter = map.getCenter()
+      const currentCenterTuple: [number, number] = [currentCenter.lat, currentCenter.lng]
+      if (!centersAreEqual(currentCenterTuple, center) || map.getZoom() !== zoom) {
+        map.setView(center, zoom)
+      }
     }
   }, [center, zoom, map])
 
   return null
 }
 
+const MapKeyboardShortcuts: React.FC = () => {
+  const [settings] = useAtom(flightSettingsAtom)
+  const setWaypoints = useSetAtom(waypointsAtom)
+  const setSelectedWaypoint = useSetAtom(selectedWaypointAtom)
+  const map = useMap()
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault()
+        const center = map.getCenter()
+        const newWaypoint: Waypoint = {
+          id: Date.now().toString(),
+          latitude: center.lat,
+          longitude: center.lng,
+          altitude: settings.altitude,
+          speed: settings.speed,
+          gimbalPitch: settings.gimbalAngle,
+          heading: 0,
+          actions: settings.autoTakePhoto ? [{ type: 'takePhoto' }] : [],
+          dynamicAltitude: settings.dynamicAltitude,
+        }
+        setWaypoints((prevWaypoints) => [...prevWaypoints, newWaypoint])
+        setSelectedWaypoint(newWaypoint.id)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [map, setSelectedWaypoint, setWaypoints, settings])
+
+  return null
+}
+
+interface WaypointMarkerProps {
+  waypoint: Waypoint
+  index: number
+  isSelected: boolean
+  onSelect: (id: string) => void
+}
+
 // Component for individual waypoint markers
-const WaypointMarker: React.FC<{ waypoint: Waypoint; index: number }> = ({ waypoint, index }) => {
-  const [selectedWaypoint, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
-  const [, setWaypoints] = useAtom(waypointsAtom)
+const WaypointMarker: React.FC<WaypointMarkerProps> = React.memo(({ waypoint, index, isSelected, onSelect }) => {
+  const setWaypoints = useSetAtom(waypointsAtom)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragPosition, setDragPosition] = useState<[number, number] | null>(null)
   const markerRef = useRef<L.Marker | null>(null)
   const map = useMap()
   const dragStartPositionRef = useRef<{ lat: number; lng: number } | null>(null)
@@ -170,11 +227,7 @@ const WaypointMarker: React.FC<{ waypoint: Waypoint; index: number }> = ({ waypo
       // Create mouse move handler
       mouseMoveHandlerRef.current = (moveEvent: L.LeafletMouseEvent) => {
         if (isRightClickRef.current && markerRef.current) {
-          const newLatLng = moveEvent.latlng
-          // Update local drag position for visual feedback
-          setDragPosition([newLatLng.lat, newLatLng.lng])
-          // Update marker position visually
-          markerRef.current.setLatLng(newLatLng)
+          markerRef.current.setLatLng(moveEvent.latlng)
         }
       }
       
@@ -200,7 +253,6 @@ const WaypointMarker: React.FC<{ waypoint: Waypoint; index: number }> = ({ waypo
           window.removeEventListener('mouseup', mouseUpHandler)
           
           setIsDragging(false)
-          setDragPosition(null)
           dragStartPositionRef.current = null
           isRightClickRef.current = false
           mouseMoveHandlerRef.current = null
@@ -231,17 +283,19 @@ const WaypointMarker: React.FC<{ waypoint: Waypoint; index: number }> = ({ waypo
     
     // Only select on left click
     if (event.button === 0 || event.which === 1 || !event.button) {
-      setSelectedWaypoint(waypoint.id)
+      onSelect(waypoint.id)
     }
   }
 
-  // Use drag position if dragging, otherwise use waypoint position
-  const markerPosition = dragPosition || [waypoint.latitude, waypoint.longitude]
+  const markerPosition = useMemo<[number, number]>(
+    () => [waypoint.latitude, waypoint.longitude],
+    [waypoint.latitude, waypoint.longitude]
+  )
 
   // Recreate icon when heading or selection changes
   const waypointIcon = React.useMemo(
-    () => createWaypointIcon(index, selectedWaypoint === waypoint.id, waypoint.heading || 0),
-    [index, selectedWaypoint, waypoint.id, waypoint.heading]
+    () => createWaypointIcon(index, isSelected, waypoint.heading || 0),
+    [index, isSelected, waypoint.heading]
   )
 
   // Update marker icon when it changes
@@ -264,7 +318,15 @@ const WaypointMarker: React.FC<{ waypoint: Waypoint; index: number }> = ({ waypo
       }}
     />
   )
-}
+}, (prev, next) => (
+  prev.index === next.index &&
+  prev.isSelected === next.isSelected &&
+  prev.onSelect === next.onSelect &&
+  prev.waypoint.id === next.waypoint.id &&
+  prev.waypoint.latitude === next.waypoint.latitude &&
+  prev.waypoint.longitude === next.waypoint.longitude &&
+  prev.waypoint.heading === next.waypoint.heading
+))
 
 // Wrapper component for DrawingToolbar (needs to be outside MapContainer)
 const DrawingToolbarWrapper: React.FC = () => {
@@ -278,12 +340,13 @@ const MapView: React.FC = () => {
   const [selectedWaypoint, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
   const [mapCenter, setMapCenter] = useAtom(mapCenterAtom)
   const [mapZoom, setMapZoom] = useAtom(mapZoomAtom)
-  const [settings] = useAtom(flightSettingsAtom)
   const [mapError, setMapError] = React.useState<string | null>(null)
   const [mapStyle, setMapStyle] = useState<MapStyle>('osm')
   const [showStyleSelector, setShowStyleSelector] = useState(false)
-  const mapRef = useRef<L.Map | null>(null)
   const styleSelectorRef = useRef<HTMLDivElement>(null)
+  const handleSelectWaypoint = useCallback((id: string) => {
+    setSelectedWaypoint(id)
+  }, [setSelectedWaypoint])
 
   // Close style selector when clicking outside
   useEffect(() => {
@@ -320,33 +383,13 @@ const MapView: React.FC = () => {
         return
       }
 
-      // N - Add new waypoint at map center
-      if (e.key === 'n' || e.key === 'N') {
-        if (!e.ctrlKey && !e.metaKey) {
-          e.preventDefault()
-          const newWaypoint: Waypoint = {
-            id: Date.now().toString(),
-            latitude: mapCenter[0],
-            longitude: mapCenter[1],
-            altitude: settings.altitude,
-            speed: settings.speed,
-            gimbalPitch: settings.gimbalAngle,
-            heading: 0,
-            actions: settings.autoTakePhoto ? [{ type: 'takePhoto' }] : [],
-            dynamicAltitude: settings.dynamicAltitude,
-          }
-          setWaypoints([...waypoints, newWaypoint])
-          setSelectedWaypoint(newWaypoint.id)
-        }
-      }
-
       // D or Delete - Delete selected waypoint
       if ((e.key === 'Delete' || e.key === 'Backspace' || e.key === 'd' || e.key === 'D') && selectedWaypoint) {
         if (e.key === 'd' || e.key === 'D') {
           if (e.ctrlKey || e.metaKey) return // Allow Ctrl+D for browser
           e.preventDefault()
         }
-        setWaypoints(waypoints.filter((wp) => wp.id !== selectedWaypoint))
+        setWaypoints((prevWaypoints) => prevWaypoints.filter((wp) => wp.id !== selectedWaypoint))
         setSelectedWaypoint(null)
       }
 
@@ -360,10 +403,13 @@ const MapView: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [selectedWaypoint, waypoints, setWaypoints, setSelectedWaypoint, mapCenter, settings])
+  }, [selectedWaypoint, setWaypoints, setSelectedWaypoint])
 
   // Create polyline path from waypoints
-  const pathPositions = waypoints.map((wp) => [wp.latitude, wp.longitude] as [number, number])
+  const pathPositions = useMemo(
+    () => waypoints.map((wp) => [wp.latitude, wp.longitude] as [number, number]),
+    [waypoints]
+  )
 
   // Ensure map center is valid before rendering
   if (mapCenter[0] === 0 && mapCenter[1] === 0) {
@@ -386,27 +432,14 @@ const MapView: React.FC = () => {
     )
   }
 
-  try {
-    return (
-      <div className="map-view">
-        <DrawingToolbarWrapper />
-        <MapContainer
-          center={mapCenter}
-          zoom={mapZoom}
-          style={{ height: '100%', width: '100%' }}
-          ref={mapRef}
-          whenReady={() => {
-            console.log('Map ready')
-            if (mapRef.current) {
-              mapRef.current.on('moveend', () => {
-                const center = mapRef.current!.getCenter()
-                setMapCenter([center.lat, center.lng])
-                setMapZoom(mapRef.current!.getZoom())
-              })
-            }
-          }}
-          key={`map-${mapCenter[0]}-${mapCenter[1]}`}
-        >
+  return (
+    <div className="map-view">
+      <DrawingToolbarWrapper />
+      <MapContainer
+        center={mapCenter}
+        zoom={mapZoom}
+        style={{ height: '100%', width: '100%' }}
+      >
           <TileLayer
             key={mapStyle}
             attribution={MAP_STYLES[mapStyle].attribution}
@@ -414,73 +447,67 @@ const MapView: React.FC = () => {
           />
           <MapClickHandler />
           <MapViewSync />
+          <MapKeyboardShortcuts />
           <DrawingTools />
           
           {waypoints.map((waypoint, index) => (
-            <WaypointMarker key={waypoint.id} waypoint={waypoint} index={index} />
+            <WaypointMarker
+              key={waypoint.id}
+              waypoint={waypoint}
+              index={index}
+              isSelected={selectedWaypoint === waypoint.id}
+              onSelect={handleSelectWaypoint}
+            />
           ))}
           
           {waypoints.length > 1 && (
             <Polyline
               positions={pathPositions}
-              pathOptions={{
-                color: '#4a90e2',
-                weight: 3,
-                opacity: 0.7,
-              }}
+              pathOptions={polylinePathOptions}
             />
           )}
-        </MapContainer>
-        
-        <div className="map-controls">
-          <div className="map-info">
-            {waypoints.length > 0 && (
-              <div className="info-item">
-                <strong>{waypoints.length}</strong> waypoint{waypoints.length !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Map Style Selector */}
-        <div className="map-style-selector" ref={styleSelectorRef}>
-          <button
-            className="map-style-btn"
-            onClick={() => setShowStyleSelector(!showStyleSelector)}
-            title="Change Map Style"
-          >
-            <Layers size={18} />
-            <span>{MAP_STYLES[mapStyle].name}</span>
-          </button>
-          {showStyleSelector && (
-            <div className="map-style-menu">
-              {Object.entries(MAP_STYLES).map(([key, style]) => (
-                <button
-                  key={key}
-                  className={`map-style-option ${mapStyle === key ? 'active' : ''}`}
-                  onClick={() => {
-                    setMapStyle(key as MapStyle)
-                    setShowStyleSelector(false)
-                  }}
-                >
-                  <MapIcon size={16} />
-                  <span>{style.name}</span>
-                </button>
-              ))}
+      </MapContainer>
+      
+      <div className="map-controls">
+        <div className="map-info">
+          {waypoints.length > 0 && (
+            <div className="info-item">
+              <strong>{waypoints.length}</strong> waypoint{waypoints.length !== 1 ? 's' : ''}
             </div>
           )}
         </div>
       </div>
-    )
-  } catch (error) {
-    console.error('MapView error:', error)
-    setMapError(error instanceof Error ? error.message : 'Unknown error')
-    return (
-      <div className="map-view" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Error loading map. Check console for details.</div>
+
+      {/* Map Style Selector */}
+      <div className="map-style-selector" ref={styleSelectorRef}>
+        <button
+          className="map-style-btn"
+          onClick={() => setShowStyleSelector(!showStyleSelector)}
+          title="Change Map Style"
+        >
+          <Layers size={18} />
+          <span>{MAP_STYLES[mapStyle].name}</span>
+        </button>
+        {showStyleSelector && (
+          <div className="map-style-menu">
+            {Object.entries(MAP_STYLES).map(([key, style]) => (
+              <button
+                key={key}
+                className={`map-style-option ${mapStyle === key ? 'active' : ''}`}
+                onClick={() => {
+                  setMapStyle(key as MapStyle)
+                  setShowStyleSelector(false)
+                }}
+              >
+                <MapIcon size={16} />
+                <span>{style.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-    )
-  }
+    </div>
+  )
 }
 
 export default MapView

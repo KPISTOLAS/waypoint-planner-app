@@ -1,6 +1,11 @@
-import { Waypoint, FlightPlan, FlightSettings, DJIModel } from '../types'
+import { Waypoint, FlightPlan, FlightSettings } from '../types'
 import { calculateFlightPath } from './flightPathCalculator'
 import { estimateBatteryUsage } from './batteryCalculator'
+
+const csvEscape = (value: string | number | boolean): string => {
+  const text = String(value)
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
 
 /**
  * Export waypoints to CSV format
@@ -31,44 +36,7 @@ export const exportToCSV = (waypoints: Waypoint[]): string => {
     ]
   })
   
-  return [headers, ...rows].map(row => row.join(',')).join('\n')
-}
-
-/**
- * Export to DJI FlightHub format (JSON)
- */
-export const exportToDJIFlightHub = (flightPlan: FlightPlan): any => {
-  const waypoints = flightPlan.waypoints.map((wp, index) => ({
-    waypointIndex: index,
-    latitude: wp.latitude,
-    longitude: wp.longitude,
-    altitude: wp.altitude,
-    speed: wp.speed || flightPlan.settings.speed,
-    gimbalPitch: wp.gimbalPitch || flightPlan.settings.gimbalAngle,
-    heading: wp.heading || 0,
-    actions: wp.actions?.map(a => ({
-      actionType: a.type,
-      actionParam: a.params || {},
-    })) || [],
-  }))
-  
-  return {
-    version: '1.0',
-    mission: {
-      name: flightPlan.name,
-      droneModel: flightPlan.droneModel,
-      waypoints,
-      settings: {
-        altitude: flightPlan.settings.altitude,
-        speed: flightPlan.settings.speed,
-        gimbalAngle: flightPlan.settings.gimbalAngle,
-        pathSpacing: flightPlan.settings.pathSpacing,
-        imageOverlap: flightPlan.settings.imageOverlap,
-      },
-      createdAt: flightPlan.createdAt.toISOString(),
-      updatedAt: flightPlan.updatedAt.toISOString(),
-    },
-  }
+  return [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\n')
 }
 
 /**
@@ -110,11 +78,11 @@ export const exportToLitchi = (waypoints: Waypoint[], settings: FlightSettings):
       wp.latitude.toFixed(8),
       wp.longitude.toFixed(8),
       wp.altitude,
-      wp.heading || 0,
+      wp.heading ?? 0,
       0, // curvesize
       0, // rotationdir
       0, // gimbalmode
-      wp.gimbalPitch || settings.gimbalAngle,
+      wp.gimbalPitch ?? settings.gimbalAngle,
       action1.type || '',
       JSON.stringify(action1.params || {}),
       action2.type || '',
@@ -122,7 +90,7 @@ export const exportToLitchi = (waypoints: Waypoint[], settings: FlightSettings):
       action3.type || '',
       JSON.stringify(action3.params || {}),
       wp.dynamicAltitude ? 1 : 0, // altitudemode
-      wp.speed || settings.speed,
+      wp.speed ?? settings.speed,
       '', // poi_latitude
       '', // poi_longitude
       '', // poi_altitude
@@ -132,7 +100,7 @@ export const exportToLitchi = (waypoints: Waypoint[], settings: FlightSettings):
     ]
   })
   
-  return [headers, ...rows].map(row => row.join(',')).join('\n')
+  return [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\n')
 }
 
 /**
@@ -143,7 +111,8 @@ export const generatePDFReport = (
   batteryEstimate: any,
   flightStats: any
 ): string => {
-  const { totalDistance, estimatedTime } = calculateFlightPath(flightPlan.waypoints, flightPlan.settings)
+  const { totalDistance, estimatedTime } =
+    flightStats ?? calculateFlightPath(flightPlan.waypoints, flightPlan.settings)
   
   return `
 <!DOCTYPE html>

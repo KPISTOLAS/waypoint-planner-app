@@ -17,7 +17,49 @@ export const historyAtom = atom<{
 
 // Helper to deep clone waypoints
 const cloneWaypoints = (waypoints: Waypoint[]): Waypoint[] => {
-  return JSON.parse(JSON.stringify(waypoints))
+  if (typeof structuredClone === 'function') {
+    return structuredClone(waypoints)
+  }
+
+  return waypoints.map((waypoint) => ({
+    ...waypoint,
+    actions: waypoint.actions?.map((action) => ({
+      ...action,
+      params: action.params ? { ...action.params } : undefined,
+    })),
+  }))
+}
+
+const areWaypointsEqual = (a: Waypoint[], b: Waypoint[]): boolean => {
+  if (a.length !== b.length) return false
+
+  return a.every((waypoint, index) => {
+    const other = b[index]
+    if (
+      waypoint.id !== other.id ||
+      waypoint.latitude !== other.latitude ||
+      waypoint.longitude !== other.longitude ||
+      waypoint.altitude !== other.altitude ||
+      waypoint.speed !== other.speed ||
+      waypoint.gimbalPitch !== other.gimbalPitch ||
+      waypoint.heading !== other.heading ||
+      waypoint.dynamicAltitude !== other.dynamicAltitude
+    ) {
+      return false
+    }
+
+    const actions = waypoint.actions || []
+    const otherActions = other.actions || []
+    if (actions.length !== otherActions.length) return false
+
+    return actions.every((action, actionIndex) => {
+      const otherAction = otherActions[actionIndex]
+      return (
+        action.type === otherAction.type &&
+        JSON.stringify(action.params || {}) === JSON.stringify(otherAction.params || {})
+      )
+    })
+  })
 }
 
 // Undo atom - restore previous state
@@ -68,13 +110,13 @@ export const addToHistoryAtom = atom(
   null,
   (get, set, waypoints: Waypoint[]) => {
     const history = get(historyAtom)
-    const newState = cloneWaypoints(waypoints)
 
     // Only save if the state actually changed
-    if (history.currentState && 
-        JSON.stringify(history.currentState) === JSON.stringify(newState)) {
+    if (history.currentState && areWaypointsEqual(history.currentState, waypoints)) {
       return // No change, don't update history
     }
+
+    const newState = cloneWaypoints(waypoints)
 
     // When a new action occurs, save the current state as previous
     // If we were in an undone state, the current state is what we want to save as previous

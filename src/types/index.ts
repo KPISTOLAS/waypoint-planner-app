@@ -42,6 +42,13 @@ export interface FlightSettings {
 }
 
 export type DJIModel =
+  | 'Mavic 3 Enterprise'
+  | 'Mavic 3 Thermal'
+  | 'Mavic 3 Multispectral'
+  | 'Matrice 30'
+  | 'Matrice 30T'
+  | 'Matrice 3D'
+  | 'Matrice 3TD'
   | 'Mini 5 Pro'
   | 'Mavic 4 Pro'
   | 'Mini 4 Pro'
@@ -52,6 +59,13 @@ export type DJIModel =
   | 'Mavic 3 Classic'
 
 export const DJI_MODELS: DJIModel[] = [
+  'Mavic 3 Enterprise',
+  'Mavic 3 Thermal',
+  'Mavic 3 Multispectral',
+  'Matrice 30',
+  'Matrice 30T',
+  'Matrice 3D',
+  'Matrice 3TD',
   'Mini 5 Pro',
   'Mavic 4 Pro',
   'Mini 4 Pro',
@@ -64,6 +78,13 @@ export const DJI_MODELS: DJIModel[] = [
 
 // Camera sensor width in millimeters for each DJI model
 export const DJI_CAMERA_SENSORS: Record<DJIModel, number> = {
+  'Mavic 3 Enterprise': 17.3,     // 4/3" CMOS
+  'Mavic 3 Thermal': 9.6,         // 1/2" visual camera
+  'Mavic 3 Multispectral': 17.3,  // 4/3" RGB camera
+  'Matrice 30': 7.6,              // 1/2" wide camera
+  'Matrice 30T': 7.6,             // 1/2" wide camera
+  'Matrice 3D': 17.3,             // 4/3" wide camera
+  'Matrice 3TD': 9.6,             // 1/1.32" wide camera
   'Mini 5 Pro': 13.2,      // 1-inch CMOS
   'Mavic 4 Pro': 17.3,     // 4/3" CMOS
   'Mini 4 Pro': 9.6,       // 1/1.3" CMOS
