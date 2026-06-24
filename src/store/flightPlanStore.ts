@@ -17,7 +17,7 @@ export const defaultFlightSettings: FlightSettings = {
   autoTakePhoto: false,
 }
 
-export const defaultDroneModel: DJIModel = 'Mavic 3'
+export const defaultDroneModel: DJIModel = 'Mavic 3 Enterprise'
 
 const isDJIModel = (value: unknown): value is DJIModel => {
   return typeof value === 'string' && (DJI_MODELS as string[]).includes(value)

@@ -14,7 +14,7 @@ import { exportToKMZ, importFromKMZ, parseKMLPolygon, parseWGS84, generateWaypoi
 import { splitMission, getRecommendedSplit } from '../utils/missionSplitter'
 import { calculateFlightPath } from '../utils/flightPathCalculator'
 import { estimateBatteryUsage, calculateMaxSafeDistance } from '../utils/batteryCalculator'
-import { exportToCSV, exportToDJIFlightHub, exportToLitchi, generatePDFReport } from '../utils/exportFormats'
+import { exportToCSV, exportToLitchi, generatePDFReport } from '../utils/exportFormats'
 import { initAutoSave, stopAutoSave } from '../utils/autoSave'
 import JSZip from 'jszip'
 import { Save, FolderOpen, Download, Upload, Trash2, Scissors, HelpCircle, FileText, FileSpreadsheet, FileJson, Battery, Clock, AlertTriangle } from 'lucide-react'
@@ -319,23 +319,30 @@ const Toolbar: React.FC = () => {
     }
   }
 
-  const handleExportDJIFlightHub = () => {
+  const handleExportDJIWPML = async () => {
     if (!flightPlan || waypoints.length === 0) return
-    
-    const data = exportToDJIFlightHub(normalizeFlightPlan({
-      ...flightPlan,
-      droneModel,
-      waypoints,
-      settings,
-    }))
-    const json = JSON.stringify(data, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${flightPlan.name}_flightHub.json`
-    a.click()
-    URL.revokeObjectURL(url)
+
+    try {
+      const activePlan = normalizeFlightPlan({
+        ...flightPlan,
+        droneModel,
+        waypoints,
+        settings,
+        updatedAt: new Date(),
+      })
+      const kmzBlob = await exportToKMZ(activePlan)
+      const url = URL.createObjectURL(kmzBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${flightPlan.name}_dji_wpml.kmz`
+      a.click()
+      URL.revokeObjectURL(url)
+      addToast(`DJI WPML KMZ "${flightPlan.name}_dji_wpml.kmz" exported successfully!`, 'success')
+    } catch (error) {
+      console.error('Failed to export DJI WPML:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to export DJI WPML: ${errorMessage}`, 'error')
+    }
   }
 
   const handleExportLitchi = () => {
@@ -391,7 +398,8 @@ const Toolbar: React.FC = () => {
       addToast(`KMZ file "${planToUse.name}.kmz" exported successfully!`, 'success')
     } catch (error) {
       console.error('Failed to export KMZ:', error)
-      addToast('Failed to export KMZ file. Please check the console for details.', 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to export KMZ file: ${errorMessage}`, 'error')
     }
   }
 
@@ -601,7 +609,8 @@ const Toolbar: React.FC = () => {
       setShowSplitDialog(false)
     } catch (error) {
       console.error('Failed to create zip file:', error)
-      addToast('Failed to create zip file. Please check the console for details.', 'error')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast(`Failed to create split mission package: ${errorMessage}`, 'error')
     }
   }
 
@@ -652,7 +661,7 @@ const Toolbar: React.FC = () => {
             <div className="export-menu" onClick={(e) => e.stopPropagation()}>
               <button className="export-menu-item" onClick={() => { handleExportKMZ(); setShowExportMenu(false); }}>
                 <Download size={16} />
-                <span>Export KMZ</span>
+                <span>Export DJI KMZ</span>
               </button>
               <button className="export-menu-item" onClick={() => { handleExportCSV(); setShowExportMenu(false); }}>
                 <FileSpreadsheet size={16} />
@@ -662,9 +671,9 @@ const Toolbar: React.FC = () => {
                 <FileText size={16} />
                 <span>Export PDF Report</span>
               </button>
-              <button className="export-menu-item" onClick={() => { handleExportDJIFlightHub(); setShowExportMenu(false); }}>
+              <button className="export-menu-item" onClick={() => { handleExportDJIWPML(); setShowExportMenu(false); }}>
                 <FileJson size={16} />
-                <span>Export DJI FlightHub</span>
+                <span>Export DJI WPML</span>
               </button>
               <button className="export-menu-item" onClick={() => { handleExportLitchi(); setShowExportMenu(false); }}>
                 <FileSpreadsheet size={16} />

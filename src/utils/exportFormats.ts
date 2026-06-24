@@ -1,4 +1,4 @@
-import { Waypoint, FlightPlan, FlightSettings, DJIModel } from '../types'
+import { Waypoint, FlightPlan, FlightSettings } from '../types'
 import { calculateFlightPath } from './flightPathCalculator'
 import { estimateBatteryUsage } from './batteryCalculator'
 
@@ -37,43 +37,6 @@ export const exportToCSV = (waypoints: Waypoint[]): string => {
   })
   
   return [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\n')
-}
-
-/**
- * Export to DJI FlightHub format (JSON)
- */
-export const exportToDJIFlightHub = (flightPlan: FlightPlan): any => {
-  const waypoints = flightPlan.waypoints.map((wp, index) => ({
-    waypointIndex: index,
-    latitude: wp.latitude,
-    longitude: wp.longitude,
-    altitude: wp.altitude,
-    speed: wp.speed ?? flightPlan.settings.speed,
-    gimbalPitch: wp.gimbalPitch ?? flightPlan.settings.gimbalAngle,
-    heading: wp.heading || 0,
-    actions: wp.actions?.map(a => ({
-      actionType: a.type,
-      actionParam: a.params || {},
-    })) || [],
-  }))
-  
-  return {
-    version: '1.0',
-    mission: {
-      name: flightPlan.name,
-      droneModel: flightPlan.droneModel,
-      waypoints,
-      settings: {
-        altitude: flightPlan.settings.altitude,
-        speed: flightPlan.settings.speed,
-        gimbalAngle: flightPlan.settings.gimbalAngle,
-        pathSpacing: flightPlan.settings.pathSpacing,
-        imageOverlap: flightPlan.settings.imageOverlap,
-      },
-      createdAt: flightPlan.createdAt.toISOString(),
-      updatedAt: flightPlan.updatedAt.toISOString(),
-    },
-  }
 }
 
 /**
