@@ -68,7 +68,8 @@ const straightenPaths = (waypoints: Waypoint[]): Waypoint[] => {
     // Calculate angle between segments
     const angle1 = calculateBearing(prev, curr)
     const angle2 = calculateBearing(curr, next)
-    const angleDiff = Math.abs(angle1 - angle2)
+    const rawAngleDiff = Math.abs(angle1 - angle2)
+    const angleDiff = Math.min(rawAngleDiff, 360 - rawAngleDiff)
 
     // If angle change is significant, keep the waypoint
     if (angleDiff > 10) {
@@ -177,13 +178,13 @@ export const applyDynamicAltitude = (
   if (!terrainData || terrainData.length !== waypoints.length) {
     return waypoints.map((wp) => ({
       ...wp,
-      altitude: wp.altitude || baseAltitude,
+      altitude: wp.altitude ?? baseAltitude,
     }))
   }
 
   return waypoints.map((wp, index) => ({
     ...wp,
-    altitude: (wp.altitude || baseAltitude) + (terrainData[index] || 0),
+    altitude: (wp.altitude ?? baseAltitude) + (terrainData[index] ?? 0),
   }))
 }
 

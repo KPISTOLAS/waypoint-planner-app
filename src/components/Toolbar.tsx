@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAtom, useSetAtom } from 'jotai'
-import { currentFlightPlanAtom, waypointsAtom, flightSettingsAtom, droneModelAtom } from '../store/flightPlanStore'
+import {
+  currentFlightPlanAtom,
+  droneModelAtom,
+  flightSettingsAtom,
+  normalizeFlightPlan,
+  selectedWaypointAtom,
+  waypointsAtom,
+} from '../store/flightPlanStore'
 import { addToastAtom } from '../store/toastStore'
 import { FlightPlan } from '../types'
 import { exportToKMZ, importFromKMZ, parseKMLPolygon, parseWGS84, generateWaypointsFromPolygonCoords } from '../utils/kmzHandler'
@@ -16,8 +23,9 @@ import './Toolbar.css'
 const Toolbar: React.FC = () => {
   const [flightPlan, setFlightPlan] = useAtom(currentFlightPlanAtom)
   const [waypoints, setWaypoints] = useAtom(waypointsAtom)
-  const [settings] = useAtom(flightSettingsAtom)
-  const [droneModel] = useAtom(droneModelAtom)
+  const [settings, setSettings] = useAtom(flightSettingsAtom)
+  const [droneModel, setDroneModel] = useAtom(droneModelAtom)
+  const [, setSelectedWaypoint] = useAtom(selectedWaypointAtom)
   const [showSplitDialog, setShowSplitDialog] = useState(false)
   const [waypointsPerMission, setWaypointsPerMission] = useState(50)
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -56,18 +64,20 @@ const Toolbar: React.FC = () => {
       return
     }
     
-    const planToSave = {
+    const updatedAt = new Date()
+    const planToSave: FlightPlan = {
       ...flightPlan,
+      droneModel,
       waypoints,
       settings,
-      updatedAt: new Date(),
+      updatedAt,
     }
     
     if (window.electronAPI) {
       try {
         // Try to update existing project first
         await window.electronAPI.updateProject(flightPlan.name, planToSave)
-        setFlightPlan({ ...planToSave, updatedAt: new Date() })
+        setFlightPlan(planToSave)
         console.log('Project saved successfully')
         // Show success message
         addToast(`Project "${flightPlan.name}" saved successfully!`, 'success')
@@ -76,7 +86,7 @@ const Toolbar: React.FC = () => {
         // If update fails, try to create new project
         try {
           await window.electronAPI.createProject(flightPlan.name, planToSave)
-          setFlightPlan({ ...planToSave, updatedAt: new Date() })
+          setFlightPlan(planToSave)
           console.log('Project created successfully')
           addToast(`Project "${flightPlan.name}" created successfully!`, 'success')
         } catch (createError: any) {
@@ -97,7 +107,7 @@ const Toolbar: React.FC = () => {
       URL.revokeObjectURL(url)
       addToast(`Project "${flightPlan.name}" downloaded!`, 'success')
     }
-  }, [flightPlan, waypoints, settings, setFlightPlan, addToast])
+  }, [flightPlan, waypoints, settings, droneModel, setFlightPlan, addToast])
 
   // Keyboard shortcut: Ctrl+S to save
   React.useEffect(() => {
@@ -227,7 +237,7 @@ const Toolbar: React.FC = () => {
             throw new Error('File content is empty')
           }
           
-          const plan = JSON.parse(result.content) as FlightPlan
+          const plan = normalizeFlightPlan(JSON.parse(result.content) as FlightPlan)
           
           // Validate the plan structure
           if (!plan.waypoints || !Array.isArray(plan.waypoints)) {
@@ -236,6 +246,8 @@ const Toolbar: React.FC = () => {
           
           setFlightPlan(plan)
           setWaypoints(plan.waypoints || [])
+          setSettings(plan.settings)
+          setDroneModel(plan.droneModel)
           
           addToast(`Successfully loaded flight plan "${plan.name}" with ${plan.waypoints.length} waypoints.`, 'success')
         } catch (error) {
@@ -288,7 +300,13 @@ const Toolbar: React.FC = () => {
     
     const battery = estimateBatteryUsage(waypoints, settings, droneModel)
     const path = calculateFlightPath(waypoints, settings)
-    const html = generatePDFReport(flightPlan, battery, path)
+    const activePlan = normalizeFlightPlan({
+      ...flightPlan,
+      droneModel,
+      waypoints,
+      settings,
+    })
+    const html = generatePDFReport(activePlan, battery, path)
     
     // Open in new window for printing/saving as PDF
     const printWindow = window.open('', '_blank')
@@ -306,7 +324,12 @@ const Toolbar: React.FC = () => {
   const handleExportDJIFlightHub = () => {
     if (!flightPlan || waypoints.length === 0) return
     
-    const data = exportToDJIFlightHub(flightPlan)
+    const data = exportToDJIFlightHub(normalizeFlightPlan({
+      ...flightPlan,
+      droneModel,
+      waypoints,
+      settings,
+    }))
     const json = JSON.stringify(data, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -351,6 +374,7 @@ const Toolbar: React.FC = () => {
     try {
       const kmzBlob = await exportToKMZ({
         ...planToUse,
+        droneModel,
         waypoints,
         settings,
         updatedAt: new Date(),
@@ -476,6 +500,16 @@ const Toolbar: React.FC = () => {
   const handleClear = () => {
     if (confirm('Are you sure you want to clear all waypoints?')) {
       setWaypoints([])
+      setSelectedWaypoint(null)
+      if (flightPlan) {
+        setFlightPlan({
+          ...flightPlan,
+          droneModel,
+          waypoints: [],
+          settings,
+          updatedAt: new Date(),
+        })
+      }
     }
   }
 
@@ -522,6 +556,7 @@ const Toolbar: React.FC = () => {
     const result = splitMission(
       {
         ...flightPlan,
+        droneModel,
         waypoints,
         settings,
         updatedAt: new Date(),

@@ -48,8 +48,8 @@ const generateKML = (flightPlan: FlightPlan): string => {
     
     const actions = wp.actions?.map(a => `<action>${escapeXml(a.type)}</action>`).join('') || ''
     const altitude = typeof wp.altitude === 'number' ? wp.altitude : 0
-    const speed = wp.speed || flightPlan.settings?.speed || 0
-    const gimbal = wp.gimbalPitch || flightPlan.settings?.gimbalAngle || 0
+    const speed = wp.speed ?? flightPlan.settings?.speed ?? 0
+    const gimbal = wp.gimbalPitch ?? flightPlan.settings?.gimbalAngle ?? 0
     
     return `
     <Placemark>
@@ -129,11 +129,13 @@ const parseKML = (kmlContent: string): KMZData => {
       throw new Error('No Document or Folder found in KML')
     }
     
-    const nameEl = document.querySelector('name')
-    const name = nameEl?.textContent || 'Imported Flight Plan'
+    const getDirectChildText = (parent: Element, tagName: string): string | undefined => {
+      return Array.from(parent.children).find((child) => child.tagName === tagName)?.textContent || undefined
+    }
+
+    const name = getDirectChildText(document, 'name') || 'Imported Flight Plan'
     
-    const descEl = document.querySelector('description')
-    const description = descEl?.textContent || ''
+    const description = getDirectChildText(document, 'description') || ''
     
     // Get all placemarks with Point elements
     const placemarks = Array.from(document.querySelectorAll('Placemark'))
@@ -148,16 +150,24 @@ const parseKML = (kmlContent: string): KMZData => {
           throw new Error(`No coordinates found in waypoint ${index + 1}`)
         }
         
-        const coords = coordsEl.textContent?.trim().split(',') || []
+        const coordinateText = coordsEl.textContent?.trim().split(/\s+/)[0] || ''
+        const coords = coordinateText.split(',')
         if (coords.length < 2) {
+          throw new Error(`Invalid coordinates in waypoint ${index + 1}`)
+        }
+
+        const longitude = parseFloat(coords[0])
+        const latitude = parseFloat(coords[1])
+        const altitude = coords[2] === undefined ? 50 : parseFloat(coords[2])
+        if (!Number.isFinite(longitude) || !Number.isFinite(latitude) || !Number.isFinite(altitude)) {
           throw new Error(`Invalid coordinates in waypoint ${index + 1}`)
         }
         
         return {
           id: `imported-${index}-${Date.now()}`,
-          longitude: parseFloat(coords[0]),
-          latitude: parseFloat(coords[1]),
-          altitude: parseFloat(coords[2]) || 50,
+          longitude,
+          latitude,
+          altitude,
           speed: undefined,
           gimbalPitch: undefined,
           heading: 0,
