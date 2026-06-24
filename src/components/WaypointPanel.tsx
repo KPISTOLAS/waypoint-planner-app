@@ -492,7 +492,6 @@ const WaypointPanel: React.FC = () => {
                 </div>
               )
             })}
-            </div>
           </div>
         )}
       </div>
