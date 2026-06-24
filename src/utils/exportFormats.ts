@@ -148,7 +148,8 @@ export const generatePDFReport = (
   batteryEstimate: any,
   flightStats: any
 ): string => {
-  const { totalDistance, estimatedTime } = calculateFlightPath(flightPlan.waypoints, flightPlan.settings)
+  const { totalDistance, estimatedTime } =
+    flightStats ?? calculateFlightPath(flightPlan.waypoints, flightPlan.settings)
   
   return `
 <!DOCTYPE html>

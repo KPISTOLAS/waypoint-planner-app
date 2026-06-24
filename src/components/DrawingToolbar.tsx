@@ -13,15 +13,12 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({ mode, onModeChange }) =
   const [isVisible, setIsVisible] = useAtom(drawingToolbarVisibleAtom)
 
   const handleModeChange = (newMode: DrawingMode) => {
-    console.log('Drawing mode changing from', mode, 'to', newMode)
     onModeChange(newMode)
   }
 
   const toggleVisibility = () => {
     setIsVisible(!isVisible)
   }
-
-  console.log('DrawingToolbar rendering, mode:', mode, 'visible:', isVisible)
 
   return (
     <div className={`drawing-toolbar ${isVisible ? 'visible' : 'hidden'}`}>

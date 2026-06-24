@@ -16,7 +16,6 @@ export default defineConfig({
   optimizeDeps: {
     include: ['leaflet', 'react', 'react-dom', 'react/jsx-runtime'],
     exclude: ['leaflet-draw'],
-    force: true, // Force re-optimization (remove this after first successful build)
   },
   build: {
     commonjsOptions: {

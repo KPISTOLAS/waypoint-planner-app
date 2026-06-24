@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { useAtom, useSetAtom } from 'jotai'
 import { waypointsAtom, selectedWaypointAtom, flightSettingsAtom } from '../store/flightPlanStore'
 import { addToHistoryAtom, undoAtom, redoAtom, canUndoAtom, canRedoAtom } from '../store/historyStore'
@@ -6,6 +6,9 @@ import { Waypoint, WaypointAction } from '../types'
 import { MapPin, Trash2, Edit, Plus, Camera, Video, RotateCcw, ChevronDown, ChevronUp, Copy, Clipboard, Layers, FileStack, Undo2, Redo2, GripVertical } from 'lucide-react'
 import { WAYPOINT_TEMPLATES, generateWaypointsFromTemplate } from '../utils/waypointTemplates'
 import './WaypointPanel.css'
+
+const WAYPOINT_ROW_HEIGHT = 86
+const WAYPOINT_OVERSCAN = 6
 
 const WaypointPanel: React.FC = () => {
   const [waypoints, setWaypoints] = useAtom(waypointsAtom)
@@ -17,6 +20,9 @@ const WaypointPanel: React.FC = () => {
   const [showBulkEdit, setShowBulkEdit] = useState(false)
   const [bulkEditValues, setBulkEditValues] = useState<Partial<Waypoint>>({})
   const [showTemplates, setShowTemplates] = useState(false)
+  const [listScrollTop, setListScrollTop] = useState(0)
+  const [listViewportHeight, setListViewportHeight] = useState(0)
+  const listRef = useRef<HTMLDivElement>(null)
   
   // Undo/Redo
   const addToHistory = useSetAtom(addToHistoryAtom)
@@ -44,6 +50,36 @@ const WaypointPanel: React.FC = () => {
   
   // Don't auto-save to history on every change - only save when explicit actions occur
   // This prevents saving on every keystroke or minor update
+
+  useEffect(() => {
+    const listElement = listRef.current
+    if (!listElement) return
+
+    const updateHeight = () => setListViewportHeight(listElement.clientHeight)
+    updateHeight()
+
+    const resizeObserver = new ResizeObserver(updateHeight)
+    resizeObserver.observe(listElement)
+
+    return () => resizeObserver.disconnect()
+  }, [isCollapsed])
+
+  const visibleWaypointRange = useMemo(() => {
+    if (waypoints.length === 0) {
+      return { start: 0, end: 0 }
+    }
+
+    const visibleCount = Math.ceil((listViewportHeight || WAYPOINT_ROW_HEIGHT * 10) / WAYPOINT_ROW_HEIGHT)
+    const start = Math.max(0, Math.floor(listScrollTop / WAYPOINT_ROW_HEIGHT) - WAYPOINT_OVERSCAN)
+    const end = Math.min(waypoints.length, start + visibleCount + WAYPOINT_OVERSCAN * 2)
+
+    return { start, end }
+  }, [listScrollTop, listViewportHeight, waypoints.length])
+
+  const visibleWaypoints = useMemo(
+    () => waypoints.slice(visibleWaypointRange.start, visibleWaypointRange.end),
+    [visibleWaypointRange.end, visibleWaypointRange.start, waypoints]
+  )
 
   const handleAddWaypoint = () => {
     const newWaypoint: Waypoint = {
@@ -360,7 +396,11 @@ const WaypointPanel: React.FC = () => {
       
       {!isCollapsed && (
       <div className="waypoint-panel-content">
-      <div className="waypoint-list">
+      <div
+        className="waypoint-list"
+        ref={listRef}
+        onScroll={(e) => setListScrollTop(e.currentTarget.scrollTop)}
+      >
         {waypoints.length === 0 ? (
           <div className="empty-state">
             <MapPin size={48} strokeWidth={1} />
@@ -368,76 +408,92 @@ const WaypointPanel: React.FC = () => {
             <p className="empty-hint">Click "Add Waypoint" or click on the map to create one</p>
           </div>
         ) : (
-          waypoints.map((waypoint, index) => (
-            <div
-              key={waypoint.id}
-              className={`waypoint-item ${selectedWaypoint === waypoint.id ? 'selected' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
-              onClick={() => setSelectedWaypoint(waypoint.id)}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              style={{ cursor: 'move' }}
-            >
-              <div className="waypoint-number" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <GripVertical size={14} style={{ cursor: 'grab', color: '#999' }} />
-                <input
-                  type="checkbox"
-                  checked={selectedWaypoints.has(waypoint.id)}
-                  onChange={(e) => toggleWaypointSelection(waypoint.id, e as any)}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ marginRight: '8px' }}
-                />
-                {index + 1}
-              </div>
-              <div className="waypoint-info">
-                <div className="waypoint-coords">
-                  {waypoint.latitude.toFixed(6)}, {waypoint.longitude.toFixed(6)}
-                </div>
-                <div className="waypoint-details">
-                  Alt: {waypoint.altitude}m | Speed: {waypoint.speed || settings.speed}m/s
-                </div>
-                {waypoint.actions && waypoint.actions.length > 0 && (
-                  <div className="waypoint-actions">
-                    {waypoint.actions.length} action(s)
+          <div
+            className="waypoint-list-spacer"
+            style={{ height: `${waypoints.length * WAYPOINT_ROW_HEIGHT}px` }}
+          >
+            {visibleWaypoints.map((waypoint, visibleIndex) => {
+              const index = visibleWaypointRange.start + visibleIndex
+
+              return (
+                <div
+                  key={waypoint.id}
+                  className={`waypoint-item ${selectedWaypoint === waypoint.id ? 'selected' : ''} ${dragOverIndex === index ? 'drag-over' : ''}`}
+                  onClick={() => setSelectedWaypoint(waypoint.id)}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  style={{
+                    cursor: 'move',
+                    left: 0,
+                    position: 'absolute',
+                    right: 0,
+                    top: `${index * WAYPOINT_ROW_HEIGHT}px`,
+                  }}
+                >
+                  <div className="waypoint-number" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <GripVertical size={14} style={{ cursor: 'grab', color: '#999' }} />
+                    <input
+                      type="checkbox"
+                      checked={selectedWaypoints.has(waypoint.id)}
+                      onChange={(e) => toggleWaypointSelection(waypoint.id, e as any)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ marginRight: '8px' }}
+                    />
+                    {index + 1}
                   </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button
-                  className="waypoint-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleCopyWaypoint(waypoint.id)
-                  }}
-                  title="Copy Waypoint (Ctrl+C)"
-                >
-                  <Copy size={14} />
-                </button>
-                <button
-                  className="waypoint-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDuplicateWaypoint(waypoint.id)
-                  }}
-                  title="Duplicate Waypoint"
-                >
-                  <Layers size={14} />
-                </button>
-                <button
-                  className="delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteWaypoint(waypoint.id)
-                  }}
-                  title="Delete Waypoint (D)"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+                  <div className="waypoint-info">
+                    <div className="waypoint-coords">
+                      {waypoint.latitude.toFixed(6)}, {waypoint.longitude.toFixed(6)}
+                    </div>
+                    <div className="waypoint-details">
+                      Alt: {waypoint.altitude}m | Speed: {waypoint.speed || settings.speed}m/s
+                    </div>
+                    {waypoint.actions && waypoint.actions.length > 0 && (
+                      <div className="waypoint-actions">
+                        {waypoint.actions.length} action(s)
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      className="waypoint-action-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleCopyWaypoint(waypoint.id)
+                      }}
+                      title="Copy Waypoint (Ctrl+C)"
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button
+                      className="waypoint-action-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDuplicateWaypoint(waypoint.id)
+                      }}
+                      title="Duplicate Waypoint"
+                    >
+                      <Layers size={14} />
+                    </button>
+                    <button
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteWaypoint(waypoint.id)
+                      }}
+                      title="Delete Waypoint (D)"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
             </div>
-          ))
+          </div>
         )}
       </div>
 

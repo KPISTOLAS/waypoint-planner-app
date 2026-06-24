@@ -87,6 +87,67 @@ const PRESETS: Record<string, { name: string; icon: React.ReactNode; settings: F
   },
 }
 
+// Calculate settings based on quality slider, area size, and camera sensor
+const calculateSettingsFromQuality = (quality: number, area: number, sensorWidth: number) => {
+  // Map quality (0-100) to overlap (25%-95%)
+  const overlap = 25 + (quality / 100) * 70 // 25% to 95%
+  
+  // Reference sensor width (13.2mm - typical 1-inch sensor)
+  const referenceSensorWidth = 13.2
+  // Sensor ratio: larger sensors can fly higher for same ground coverage
+  const sensorRatio = sensorWidth / referenceSensorWidth
+  
+  // Calculate suggested altitude based on area size (for display only, not applied)
+  // Small area (< 10,000 m²): 30-50m
+  // Medium area (10,000 - 100,000 m²): 50-80m
+  // Large area (> 100,000 m²): 80-120m
+  let baseAltitude = 50
+  if (area < 10000) {
+    baseAltitude = 30 + (quality / 100) * 20 // 30-50m
+  } else if (area < 100000) {
+    baseAltitude = 50 + (quality / 100) * 30 // 50-80m
+  } else {
+    baseAltitude = 80 + (quality / 100) * 40 // 80-120m
+  }
+  
+  // Adjust altitude based on sensor size
+  // Larger sensors can achieve same GSD at higher altitudes
+  // Formula: optimal altitude = base altitude * sensor ratio
+  const suggestedAltitude = baseAltitude * sensorRatio
+  
+  // Calculate path spacing based on sensor width, suggested altitude, and overlap
+  // Ground coverage width is proportional to (altitude * sensor width)
+  // For typical DJI cameras with ~24mm equivalent focal length:
+  // Ground width ~= (altitude * sensor_width) / focal_length_equivalent
+  const approximateFocalLength = 24 // mm
+  const groundCoverageWidth = (suggestedAltitude * sensorWidth) / approximateFocalLength
+  
+  // Path spacing = ground coverage width * (1 - overlap/100)
+  let pathSpacing = groundCoverageWidth * (1 - overlap / 100)
+  
+  // Enforce minimum path spacing to prevent too many waypoints
+  // Minimum spacing: 5m for small areas, 8m for medium, 10m for large
+  let minPathSpacing = 5
+  if (area >= 100000) {
+    minPathSpacing = 10
+  } else if (area >= 10000) {
+    minPathSpacing = 8
+  }
+  
+  // Ensure path spacing is never too small
+  pathSpacing = Math.max(pathSpacing, minPathSpacing)
+  
+  // Also enforce maximum reasonable spacing (to avoid too few waypoints)
+  const maxPathSpacing = 50
+  pathSpacing = Math.min(pathSpacing, maxPathSpacing)
+  
+  return {
+    overlap: Math.round(overlap),
+    suggestedAltitude: Math.round(suggestedAltitude),
+    pathSpacing: Math.round(pathSpacing * 10) / 10, // Round to 1 decimal
+  }
+}
+
 const SettingsPanel: React.FC = () => {
   const [settings, setSettings] = useAtom(flightSettingsAtom)
   const [droneModel, setDroneModel] = useAtom(droneModelAtom)
@@ -96,6 +157,7 @@ const SettingsPanel: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [qualityValue, setQualityValue] = useState(50) // Default to middle (60% overlap)
   const isQualityChangingRef = useRef(false)
+  const previousAutoTakePhotoRef = useRef(settings.autoTakePhoto)
   const [isApplyingElevation, setIsApplyingElevation] = useState(false)
   const addToast = useSetAtom(addToastAtom)
 
@@ -118,12 +180,17 @@ const SettingsPanel: React.FC = () => {
   const areaSize = useMemo(() => {
     if (waypoints.length < 2) return 0
     
-    const lats = waypoints.map(wp => wp.latitude)
-    const lngs = waypoints.map(wp => wp.longitude)
-    const minLat = Math.min(...lats)
-    const maxLat = Math.max(...lats)
-    const minLng = Math.min(...lngs)
-    const maxLng = Math.max(...lngs)
+    let minLat = waypoints[0].latitude
+    let maxLat = waypoints[0].latitude
+    let minLng = waypoints[0].longitude
+    let maxLng = waypoints[0].longitude
+
+    for (const waypoint of waypoints) {
+      minLat = Math.min(minLat, waypoint.latitude)
+      maxLat = Math.max(maxLat, waypoint.latitude)
+      minLng = Math.min(minLng, waypoint.longitude)
+      maxLng = Math.max(maxLng, waypoint.longitude)
+    }
     
     // Calculate area in square meters using Haversine formula approximation
     const centerLat = (minLat + maxLat) / 2
@@ -136,74 +203,16 @@ const SettingsPanel: React.FC = () => {
     return width * height
   }, [waypoints])
 
-  // Calculate settings based on quality slider, area size, and camera sensor
-  const calculateSettingsFromQuality = (quality: number, area: number, sensorWidth: number) => {
-    // Map quality (0-100) to overlap (25%-95%)
-    const overlap = 25 + (quality / 100) * 70 // 25% to 95%
-    
-    // Reference sensor width (13.2mm - typical 1-inch sensor)
-    const referenceSensorWidth = 13.2
-    // Sensor ratio: larger sensors can fly higher for same ground coverage
-    const sensorRatio = sensorWidth / referenceSensorWidth
-    
-    // Calculate suggested altitude based on area size (for display only, not applied)
-    // Small area (< 10,000 m²): 30-50m
-    // Medium area (10,000 - 100,000 m²): 50-80m
-    // Large area (> 100,000 m²): 80-120m
-    let baseAltitude = 50
-    if (area < 10000) {
-      baseAltitude = 30 + (quality / 100) * 20 // 30-50m
-    } else if (area < 100000) {
-      baseAltitude = 50 + (quality / 100) * 30 // 50-80m
-    } else {
-      baseAltitude = 80 + (quality / 100) * 40 // 80-120m
-    }
-    
-    // Adjust altitude based on sensor size
-    // Larger sensors can achieve same GSD at higher altitudes
-    // Formula: optimal altitude = base altitude * sensor ratio
-    const suggestedAltitude = baseAltitude * sensorRatio
-    
-    // Calculate path spacing based on sensor width, suggested altitude, and overlap
-    // Ground coverage width is proportional to (altitude * sensor width)
-    // For typical DJI cameras with ~24mm equivalent focal length:
-    // Ground width ≈ (altitude * sensor_width) / focal_length_equivalent
-    // Using approximate focal length of 24mm (typical for DJI wide cameras)
-    const approximateFocalLength = 24 // mm
-    const groundCoverageWidth = (suggestedAltitude * sensorWidth) / approximateFocalLength
-    
-    // Path spacing = ground coverage width * (1 - overlap/100)
-    let pathSpacing = groundCoverageWidth * (1 - overlap / 100)
-    
-    // Enforce minimum path spacing to prevent too many waypoints
-    // Minimum spacing: 5m for small areas, 8m for medium, 10m for large
-    let minPathSpacing = 5
-    if (area >= 100000) {
-      minPathSpacing = 10
-    } else if (area >= 10000) {
-      minPathSpacing = 8
-    }
-    
-    // Ensure path spacing is never too small
-    pathSpacing = Math.max(pathSpacing, minPathSpacing)
-    
-    // Also enforce maximum reasonable spacing (to avoid too few waypoints)
-    const maxPathSpacing = 50
-    pathSpacing = Math.min(pathSpacing, maxPathSpacing)
-    
-    return {
-      overlap: Math.round(overlap),
-      suggestedAltitude: Math.round(suggestedAltitude),
-      pathSpacing: Math.round(pathSpacing * 10) / 10, // Round to 1 decimal
-    }
-  }
+  const qualityDerived = useMemo(
+    () => calculateSettingsFromQuality(qualityValue, areaSize, DJI_CAMERA_SENSORS[droneModel]),
+    [areaSize, droneModel, qualityValue]
+  )
 
   // Handle quality slider change
   const handleQualityChange = (value: number) => {
     isQualityChangingRef.current = true
     setQualityValue(value)
-    const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
-    const calculated = calculateSettingsFromQuality(value, areaSize, sensorWidth)
+    const calculated = calculateSettingsFromQuality(value, areaSize, DJI_CAMERA_SENSORS[droneModel])
     
     // Only update pathSpacing and overlap, NOT altitude
     setSettings({
@@ -227,12 +236,10 @@ const SettingsPanel: React.FC = () => {
     if (isQualityChangingRef.current) return
     
     if (waypoints.length >= 2) {
-      const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
-      const calculated = calculateSettingsFromQuality(qualityValue, areaSize, sensorWidth)
       // Only sync if overlap matches (within 5% tolerance)
       const overlapMatches = 
-        Math.abs(settings.imageOverlap.forward - calculated.overlap) < 5 &&
-        Math.abs(settings.imageOverlap.side - calculated.overlap) < 5
+        Math.abs(settings.imageOverlap.forward - qualityDerived.overlap) < 5 &&
+        Math.abs(settings.imageOverlap.side - qualityDerived.overlap) < 5
       
       if (!overlapMatches) {
         // Settings were changed manually, try to find matching quality value
@@ -243,28 +250,38 @@ const SettingsPanel: React.FC = () => {
         }
       }
     }
-  }, [settings.imageOverlap, areaSize, droneModel])
+  }, [settings.imageOverlap, qualityDerived.overlap])
 
   // Recalculate path spacing when drone model or quality changes (but not altitude)
   useEffect(() => {
     if (waypoints.length >= 2 && !isQualityChangingRef.current) {
-      const sensorWidth = DJI_CAMERA_SENSORS[droneModel]
-      const calculated = calculateSettingsFromQuality(qualityValue, areaSize, sensorWidth)
-      setSettings(prev => ({
-        ...prev,
-        pathSpacing: calculated.pathSpacing,
-      }))
+      setSettings(prev => (
+        prev.pathSpacing === qualityDerived.pathSpacing
+          ? prev
+          : {
+              ...prev,
+              pathSpacing: qualityDerived.pathSpacing,
+            }
+      ))
     }
-  }, [droneModel, qualityValue, areaSize, waypoints.length])
+  }, [qualityDerived.pathSpacing, setSettings, waypoints.length])
 
   // Apply/remove takePhoto action to all waypoints when autoTakePhoto setting changes
   useEffect(() => {
+    if (previousAutoTakePhotoRef.current === settings.autoTakePhoto) {
+      return
+    }
+
+    previousAutoTakePhotoRef.current = settings.autoTakePhoto
+
     if (settings.autoTakePhoto) {
       // Add takePhoto action to all waypoints that don't have it
-      setWaypoints(prevWaypoints =>
-        prevWaypoints.map(wp => {
+      setWaypoints(prevWaypoints => {
+        let changed = false
+        const nextWaypoints = prevWaypoints.map(wp => {
           const hasTakePhoto = wp.actions?.some(action => action.type === 'takePhoto')
           if (!hasTakePhoto) {
+            changed = true
             return {
               ...wp,
               actions: [...(wp.actions || []), { type: 'takePhoto' }],
@@ -272,15 +289,26 @@ const SettingsPanel: React.FC = () => {
           }
           return wp
         })
-      )
+        return changed ? nextWaypoints : prevWaypoints
+      })
     } else {
       // Remove takePhoto action from all waypoints
-      setWaypoints(prevWaypoints =>
-        prevWaypoints.map(wp => ({
-          ...wp,
-          actions: wp.actions?.filter(action => action.type !== 'takePhoto') || [],
-        }))
-      )
+      setWaypoints(prevWaypoints => {
+        let changed = false
+        const nextWaypoints = prevWaypoints.map(wp => {
+          const actions = wp.actions || []
+          const nextActions = actions.filter(action => action.type !== 'takePhoto')
+          if (nextActions.length !== actions.length) {
+            changed = true
+            return {
+              ...wp,
+              actions: nextActions,
+            }
+          }
+          return wp
+        })
+        return changed ? nextWaypoints : prevWaypoints
+      })
     }
   }, [settings.autoTakePhoto, setWaypoints])
 
@@ -389,11 +417,11 @@ const SettingsPanel: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span style={{ color: '#666' }}>Suggested Altitude:</span>
-                <span style={{ fontWeight: '600', color: '#4a90e2' }}>{calculateSettingsFromQuality(qualityValue, areaSize, DJI_CAMERA_SENSORS[droneModel]).suggestedAltitude} m</span>
+                <span style={{ fontWeight: '600', color: '#4a90e2' }}>{qualityDerived.suggestedAltitude} m</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#666' }}>Path Spacing:</span>
-                <span style={{ fontWeight: '600' }}>{calculateSettingsFromQuality(qualityValue, areaSize, DJI_CAMERA_SENSORS[droneModel]).pathSpacing} m</span>
+                <span style={{ fontWeight: '600' }}>{qualityDerived.pathSpacing} m</span>
               </div>
             </div>
           )}

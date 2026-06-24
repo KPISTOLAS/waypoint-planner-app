@@ -1,5 +1,5 @@
 import { DJIModel, Waypoint, FlightSettings } from '../types'
-import { calculateFlightPath } from './flightPathCalculator'
+import { CalculatedPath, calculateFlightPath } from './flightPathCalculator'
 
 // Battery specifications for DJI drones (in mAh and flight time in minutes)
 export const DRONE_BATTERY_SPECS: Record<DJIModel, {
@@ -33,10 +33,11 @@ export interface BatteryEstimate {
 export const estimateBatteryUsage = (
   waypoints: Waypoint[],
   settings: FlightSettings,
-  droneModel: DJIModel
+  droneModel: DJIModel,
+  calculatedPath?: Pick<CalculatedPath, 'estimatedTime'>
 ): BatteryEstimate => {
   const specs = DRONE_BATTERY_SPECS[droneModel]
-  const { totalDistance, estimatedTime } = calculateFlightPath(waypoints, settings)
+  const estimatedTime = calculatedPath?.estimatedTime ?? calculateFlightPath(waypoints, settings).estimatedTime
   
   // Convert time to minutes
   const flightTimeMinutes = estimatedTime / 60

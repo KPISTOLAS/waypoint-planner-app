@@ -38,7 +38,6 @@ export const initAutoSave = (
       if (saveCallback) {
         try {
           await saveCallback()
-          console.log('Auto-save completed')
         } catch (error) {
           console.error('Auto-save failed:', error)
         }

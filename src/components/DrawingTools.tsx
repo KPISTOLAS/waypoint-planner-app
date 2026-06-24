@@ -25,8 +25,6 @@ const DrawingTools: React.FC = () => {
   useEffect(() => {
     let isMounted = true
     
-    console.log('DrawingTools useEffect triggered, mode:', drawingMode)
-    
     // Initialize feature group for drawn shapes
     if (!drawnLayerRef.current) {
       drawnLayerRef.current = new L.FeatureGroup()
@@ -35,17 +33,11 @@ const DrawingTools: React.FC = () => {
 
     // Handle draw events - set these up first
     const handleCreated = (e: any) => {
-      console.log('Draw created event:', e)
       const layer = e.layer
       if (!layer) {
         console.error('No layer in draw:created event')
         return
       }
-      
-      console.log('Layer type:', layer.constructor.name, layer)
-      console.log('Is Polygon?', layer instanceof L.Polygon)
-      console.log('Is Rectangle?', layer instanceof L.Rectangle)
-      console.log('Is Circle?', layer instanceof L.Circle)
       
       // Apply light blue styling to the drawn shape
       if (layer.setStyle) {
@@ -74,16 +66,13 @@ const DrawingTools: React.FC = () => {
       // Set the shape based on type
       if (isCircle || isCircleByName) {
         setDrawnShape(layer as L.Circle)
-        console.log('Circle set successfully:', layer)
       } else if (isPolygon || isRectangle || isPolygonByName || isRectangleByName) {
         setDrawnShape(layer as L.Polygon | L.Rectangle)
-        console.log('Shape set successfully:', layer, { isPolygon, isRectangle, isPolygonByName, isRectangleByName })
       } else {
         // Check if it has required methods for polygon/rectangle
         const hasRequiredMethods = layer.getBounds && (layer.getLatLngs || layer.getLatLngs === undefined)
         if (hasRequiredMethods) {
           setDrawnShape(layer as L.Polygon | L.Rectangle)
-          console.log('Setting shape based on methods')
         } else {
           console.warn('Layer type check failed:', layerName, layer)
         }
@@ -94,13 +83,10 @@ const DrawingTools: React.FC = () => {
     }
 
     const handleDrawStart = () => {
-      console.log('Draw started')
       setIsDrawing(true)
     }
 
-    const handleDrawStop = () => {
-      console.log('Draw stopped')
-    }
+    const handleDrawStop = () => {}
 
     // Register event handlers
     map.on('draw:created' as any, handleCreated)
@@ -111,12 +97,9 @@ const DrawingTools: React.FC = () => {
     const initDrawing = async () => {
       if (!isMounted) return
       
-      console.log('initDrawing called with mode:', drawingMode)
-      
       // Ensure leaflet-draw is loaded
       try {
         await loadLeafletDraw()
-        console.log('leaflet-draw loaded successfully')
       } catch (error) {
         console.error('Failed to load leaflet-draw:', error)
         // Retry after a delay
@@ -141,8 +124,6 @@ const DrawingTools: React.FC = () => {
         return
       }
       
-      console.log('Leaflet Draw available:', Draw, 'Rectangle:', !!Draw.Rectangle, 'Polygon:', !!Draw.Polygon)
-      
       if (!isMounted) return
 
       // Handle drawing mode changes
@@ -152,7 +133,6 @@ const DrawingTools: React.FC = () => {
         if (currentDrawHandlerRef.current) {
           try {
             currentDrawHandlerRef.current.disable()
-            console.log('Disabled existing drawing handler')
           } catch (e) {
             // Ignore errors when disabling
           }
@@ -165,8 +145,6 @@ const DrawingTools: React.FC = () => {
           setIsDrawingLocal(false)
         }
       } else if (drawingMode === 'rectangle' || drawingMode === 'polygon' || drawingMode === 'poi') {
-        console.log('Enabling drawing mode:', drawingMode)
-        
         // Enable drawing mode
         if (drawnLayerRef.current) {
           drawnLayerRef.current.clearLayers()
@@ -190,7 +168,6 @@ const DrawingTools: React.FC = () => {
           
           if (drawingMode === 'rectangle' && Draw.Rectangle) {
             try {
-              console.log('Creating Rectangle handler...')
               const handler = new Draw.Rectangle(map, {
                 shapeOptions: {
                   color: '#4a90e2',
@@ -202,13 +179,11 @@ const DrawingTools: React.FC = () => {
               })
               currentDrawHandlerRef.current = handler as any
               handler.enable()
-              console.log('Rectangle drawing enabled successfully')
             } catch (error) {
               console.error('Error enabling rectangle drawing:', error)
             }
           } else if (drawingMode === 'polygon' && Draw.Polygon) {
             try {
-              console.log('Creating Polygon handler...')
               const handler = new Draw.Polygon(map, {
                 shapeOptions: {
                   color: '#4a90e2',
@@ -221,13 +196,11 @@ const DrawingTools: React.FC = () => {
               })
               currentDrawHandlerRef.current = handler as any
               handler.enable()
-              console.log('Polygon drawing enabled successfully')
             } catch (error) {
               console.error('Error enabling polygon drawing:', error)
             }
           } else if (drawingMode === 'poi' && Draw.Circle) {
             try {
-              console.log('Creating Circle handler...')
               const handler = new Draw.Circle(map, {
                 shapeOptions: {
                   color: '#4a90e2',
@@ -239,7 +212,6 @@ const DrawingTools: React.FC = () => {
               })
               currentDrawHandlerRef.current = handler as any
               handler.enable()
-              console.log('Circle drawing enabled successfully')
             } catch (error) {
               console.error('Error enabling circle drawing:', error)
             }
@@ -332,13 +304,7 @@ const DrawingTools: React.FC = () => {
     setDrawingMode('cursor')
   }
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log('DrawingTools state:', { isDrawingLocal, drawnShape: !!drawnShape, drawingMode })
-  }, [isDrawingLocal, drawnShape, drawingMode])
-
   if (!isDrawingLocal || !drawnShape) {
-    console.log('Not showing confirmation panel:', { isDrawingLocal, hasDrawnShape: !!drawnShape })
     return null
   }
 

@@ -3,8 +3,6 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 
-console.log('Starting application...')
-
 try {
   const rootElement = document.getElementById('root')
   if (!rootElement) {
@@ -17,7 +15,6 @@ try {
       <App />
     </React.StrictMode>,
   )
-  console.log('Application rendered successfully')
 } catch (error) {
   console.error('Failed to render application:', error)
   document.body.innerHTML = `
